@@ -1,9 +1,9 @@
 {
 	"id": "taskrobin",
-	"name": "Emails to Obsidian",
+	"name": "Sync Emails",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Sync and save emails and attachment files to your Obsidian vault with TaskRobin.",
+	"description": "Sync and save emails and attachment files to your vault with TaskRobin.",
 	"author": "TaskRobin",
 	"authorUrl": "https://www.taskrobin.io",
 	"fundingUrl": "https://app.taskrobin.io/pricing",
