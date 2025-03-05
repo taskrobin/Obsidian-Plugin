@@ -242,35 +242,36 @@ class SetupIntegrationModal extends Modal {
 			let isValid = true;
 			const sourceEmail = sourceEmailInput.value.trim();
 			const forwardingAlias = forwardingInput.value.trim();
+
 			// Validate source email
 			if (!sourceEmail) {
 				sourceEmailError.setText("Email address is required");
-				sourceEmailError.style.display = "block";
+				sourceEmailError.classList.add("visible");
 				isValid = false;
 			} else if (
 				!this.isValidEmail(sourceEmail) ||
 				this.isTaskRobinEmail(sourceEmail)
 			) {
 				sourceEmailError.setText("Please enter a valid email address.");
-				sourceEmailError.style.display = "block";
+				sourceEmailError.classList.add("visible");
 				isValid = false;
 			} else {
-				sourceEmailError.style.display = "none";
+				sourceEmailError.classList.remove("visible");
 			}
 
 			// Validate forwarding email
 			if (!forwardingAlias) {
 				forwardingEmailError.setText("Forwarding address is required");
-				forwardingEmailError.style.display = "block";
+				forwardingEmailError.classList.add("visible");
 				isValid = false;
 			} else if (!/^[a-zA-Z0-9-_]+$/.test(forwardingAlias)) {
 				forwardingEmailError.setText(
 					"Only letters, numbers, hyphens, and underscores are allowed"
 				);
-				forwardingEmailError.style.display = "block";
+				forwardingEmailError.classList.add("visible");
 				isValid = false;
 			} else {
-				forwardingEmailError.style.display = "none";
+				forwardingEmailError.classList.remove("visible");
 			}
 
 			// Update confirm button state

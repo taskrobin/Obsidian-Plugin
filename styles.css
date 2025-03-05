@@ -72,3 +72,14 @@ If your plugin does not need CSS, delete this file.
 	opacity: 0.5;
 	cursor: not-allowed;
 }
+
+.taskrobin-error-message {
+	display: none;
+	color: red;
+	font-size: 12px;
+	margin-top: 4px;
+}
+
+.taskrobin-error-message.visible {
+	display: block !important;
+}
