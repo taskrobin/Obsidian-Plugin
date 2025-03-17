@@ -42,7 +42,7 @@ export default class TaskRobinPlugin extends Plugin {
 
 		// This creates an icon in the left ribbon.
 		const ribbonIconEl = this.addRibbonIcon(
-			"dice",
+			"mail",
 			"TaskRobin",
 			(evt: MouseEvent) => {
 				this.showAppropriateModal();
@@ -53,7 +53,7 @@ export default class TaskRobinPlugin extends Plugin {
 
 		this.addCommand({
 			id: "open-modal",
-			name: "Open TaskRobin Window",
+			name: "Open TaskRobin window",
 			callback: () => {
 				this.showAppropriateModal();
 			},
@@ -165,7 +165,7 @@ class SetupIntegrationModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		contentEl.createEl("h2", { text: "Setup Email Sync" });
+		contentEl.createEl("h2", { text: "Setup email sync" });
 
 		// Explanation section
 		const explanationEl = contentEl.createEl("div", {
@@ -375,9 +375,9 @@ class SetupIntegrationModal extends Modal {
 
 			// Create directory if it doesn't exist
 			try {
-				const folderExists = await this.app.vault.adapter.exists(
-					directory
-				);
+				const folderExists =
+					(await this.app.vault.getAbstractFileByPath(directory)) !==
+					null;
 				if (!folderExists) {
 					await this.app.vault.createFolder(directory);
 				}
@@ -451,7 +451,7 @@ class SyncEmailModal extends Modal {
 		contentEl.empty();
 
 		contentEl.createEl("h2", {
-			text: `Sync Emails`,
+			text: `Sync emails`,
 		});
 
 		const helperDescription = contentEl.createEl("div", {
@@ -504,18 +504,18 @@ class SyncEmailModal extends Modal {
 
 		// Add sync button
 		const syncButton = buttonContainer.createEl("button", {
-			text: "Sync Now",
+			text: "Sync now",
 			cls: "mod-cta", // This gives it primary button styling
 		});
 
 		// Add settings button (existing code)
 		const settingsButton = buttonContainer.createEl("button", {
-			text: "Open Settings",
+			text: "Open settings",
 		});
 
 		// Add delete button
 		const deleteButton = buttonContainer.createEl("button", {
-			text: "Delete Integration",
+			text: "Delete integration",
 			cls: "mod-warning",
 		});
 
@@ -590,9 +590,9 @@ class SyncEmailModal extends Modal {
 						);
 						const emailFolderPath = `${this.plugin.settings.rootDirectory}/${folderName}`;
 						const folderExists =
-							await this.app.vault.adapter.exists(
+							(await this.app.vault.getAbstractFileByPath(
 								emailFolderPath
-							);
+							)) !== null;
 						if (!folderExists) {
 							await this.app.vault.createFolder(emailFolderPath);
 						}
@@ -752,7 +752,7 @@ class SettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Access Token")
+			.setName("Access token")
 			.setDesc("Your TaskRobin integration access token")
 			.addText((text) =>
 				text
@@ -767,7 +767,7 @@ class SettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Root Directory")
+			.setName("Root directory")
 			.setDesc(
 				"The folder where email content will be saved (folders will be created if they don't exist)"
 			)
@@ -785,12 +785,13 @@ class SettingTab extends PluginSettingTab {
 					})
 			)
 			.addButton((button) =>
-				button.setButtonText("Create Directory").onClick(async () => {
+				button.setButtonText("Create directory").onClick(async () => {
 					try {
 						const folderPath = this.plugin.settings.rootDirectory;
 						const folderExists =
-							await this.app.vault.adapter.exists(folderPath);
-
+							(await this.app.vault.getAbstractFileByPath(
+								folderPath
+							)) !== null;
 						if (!folderExists) {
 							await this.app.vault.createFolder(folderPath);
 							new Notice(`Created directory: ${folderPath}`);
@@ -810,7 +811,7 @@ class SettingTab extends PluginSettingTab {
 
 		// Add new toggle for attachments
 		new Setting(containerEl)
-			.setName("Download Attachments")
+			.setName("Download attachments")
 			.setDesc(
 				"When enabled, email attachments will be downloaded and saved in the vault"
 			)
