@@ -650,7 +650,7 @@ class SyncEmailModal extends Modal {
 			} finally {
 				// Re-enable button
 				syncButton.disabled = false;
-				syncButton.setText("Sync Now");
+				syncButton.setText("Sync now");
 			}
 		});
 
@@ -705,7 +705,7 @@ class SyncEmailModal extends Modal {
 			} finally {
 				// Re-enable button
 				deleteButton.disabled = false;
-				deleteButton.setText("Delete Integration");
+				deleteButton.setText("Delete integration");
 			}
 		});
 
