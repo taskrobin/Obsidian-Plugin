@@ -737,13 +737,13 @@ class SettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName("Registered email address")
+			.setName("Your email inbox address")
 			.setDesc(
 				"The email address that you want to sync emails from, e.g. your-name@gmail.com"
 			)
 			.addText((text) =>
 				text
-					.setPlaceholder("Enter your registered email address")
+					.setPlaceholder("Enter your email inbox address")
 					.setValue(this.plugin.settings.emailAddress)
 					.onChange(async (value) => {
 						this.plugin.settings.emailAddress = value;
