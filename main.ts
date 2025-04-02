@@ -140,7 +140,7 @@ class SetupIntegrationModal extends Modal {
 					forwardingEmailAlias;
 				await this.plugin.saveSettings();
 
-				new Notice("Integration successfully created!");
+				new Notice("Integration created successfully!");
 				this.close();
 			} else {
 				// Handle failure case
@@ -156,7 +156,7 @@ class SetupIntegrationModal extends Modal {
 			this.isSubmitting = false;
 			if (submitButton) {
 				submitButton.disabled = false;
-				submitButton.setText("Create Integration");
+				submitButton.setText("Create integration");
 			}
 		}
 	}
@@ -314,14 +314,14 @@ class SetupIntegrationModal extends Modal {
 
 		// Add confirm button
 		const confirmButton = buttonContainer.createEl("button", {
-			text: "Confirm Settings",
+			text: "Confirm settings",
 			cls: "mod-cta",
 		});
 		confirmButton.disabled = true;
 
 		// Add settings button
 		const settingsButton = buttonContainer.createEl("button", {
-			text: "Advanced Settings",
+			text: "Advanced settings",
 		});
 
 		// Function to check if all fields are filled
@@ -365,7 +365,7 @@ class SetupIntegrationModal extends Modal {
 				// Optionally show an error message to the user
 				new Notice("Failed to save settings. Please try again.");
 				confirmButton.disabled = false;
-				confirmButton.setText("Confirm Settings");
+				confirmButton.setText("Confirm settings");
 			}
 
 			// Update settings
