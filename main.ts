@@ -451,25 +451,59 @@ class SyncEmailModal extends Modal {
 		contentEl.empty();
 
 		contentEl.createEl("h2", {
-			text: `Sync emails`,
+			text: `Sync emails with TaskRobin`,
 		});
 
 		const helperDescription = contentEl.createEl("div", {
 			cls: "taskrobin-helper-description",
 		});
 
-		helperDescription.createEl("p", {
-			text: `Retrieve emails sent from ${this.plugin.settings.emailAddress} to ${this.plugin.settings.forwardingEmailAlias}@taskrobin.io`,
+		// Create paragraph with formatted email addresses
+		const emailInfoParagraph = helperDescription.createEl("p");
+		emailInfoParagraph.appendText("Download emails sent from ");
+
+		// Add source email with formatting
+		const sourceEmailSpan = emailInfoParagraph.createEl("span", {
+			cls: "taskrobin-email-address",
 		});
+		sourceEmailSpan.setText(this.plugin.settings.emailAddress);
+		sourceEmailSpan.setAttr(
+			"style",
+			"font-family: monospace; background-color: var(--background-secondary); padding: 0 4px; border-radius: 4px;"
+		);
+
+		emailInfoParagraph.appendText(" to ");
+
+		// Add forwarding email with formatting
+		const forwardingEmailSpan = emailInfoParagraph.createEl("span", {
+			cls: "taskrobin-email-address",
+		});
+		forwardingEmailSpan.setText(
+			`${this.plugin.settings.forwardingEmailAlias}@taskrobin.io`
+		);
+		forwardingEmailSpan.setAttr(
+			"style",
+			"font-family: monospace; background-color: var(--background-secondary); padding: 0 4px; border-radius: 4px;"
+		);
 
 		// Add directory information
 		const directoryInfo = contentEl.createEl("div", {
 			cls: "taskrobin-directory-info",
 		});
 
-		directoryInfo.createEl("p", {
-			text: `Emails will be saved in your vault: /${this.plugin.settings.rootDirectory}/`,
+		// Create paragraph with formatted directory path
+		const directoryParagraph = directoryInfo.createEl("p");
+		directoryParagraph.appendText("Emails will be saved in your vault: ");
+
+		// Add directory path with formatting
+		const directoryPathSpan = directoryParagraph.createEl("span", {
+			cls: "taskrobin-directory-path",
 		});
+		directoryPathSpan.setText(`/${this.plugin.settings.rootDirectory}/`);
+		directoryPathSpan.setAttr(
+			"style",
+			"font-family: monospace; background-color: var(--background-secondary); padding: 0 4px; border-radius: 4px;"
+		);
 
 		// Add attachment status
 		directoryInfo.createEl("p", {
@@ -480,6 +514,17 @@ class SyncEmailModal extends Modal {
 			}`,
 			cls: "attachment-status",
 		});
+
+		// Add TaskRobin.io link
+		const taskRobinLink = directoryInfo.createEl("p", {
+			cls: "taskrobin-link",
+		});
+		const link = taskRobinLink.createEl("a", {
+			text: "Visit TaskRobin.io for more information",
+			href: "https://www.taskrobin.io",
+		});
+		link.setAttr("target", "_blank");
+		link.setAttr("rel", "noopener noreferrer");
 
 		// Directory status check
 		try {

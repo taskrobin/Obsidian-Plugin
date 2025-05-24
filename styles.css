@@ -83,3 +83,8 @@ If your plugin does not need CSS, delete this file.
 .taskrobin-error-message.visible {
 	display: block !important;
 }
+
+.taskrobin-link {
+	margin-top: 3em;
+	font-size: 0.7em;
+}
