@@ -1,6 +1,6 @@
 # TaskRobin Email Sync for Obsidian
 
-Seamlessly sync your emails and attachments to your Obsidian vault with TaskRobin. This plugin helps you maintain a searchable archive of important emails directly within your Obsidian workspace.
+Seamlessly sync your emails and attachments to your Obsidian vault with TaskRobin. This plugin helps you maintain a searchable archive of important emails directly within your Obsidian workspace. 7-day free trial available for all new users. Subscription plans start at $2.49/month.
 
 ## Features
 

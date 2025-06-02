@@ -5,6 +5,7 @@ import {
 	Plugin,
 	PluginSettingTab,
 	Setting,
+	setIcon,
 } from "obsidian";
 
 const OBSIDIAN_API =
@@ -306,6 +307,10 @@ class SetupIntegrationModal extends Modal {
 			cls: "taskrobin-help-text",
 			text: "After setting up forwarding, emails sent to your TaskRobin address can be synced to your Obsidian vault.",
 		});
+		contentEl.createEl("p", {
+			cls: "taskrobin-help-text",
+			text: "Please note that TaskRobin is a paid service. 7-day free trial is available to all new users. Paid plan starts at $2.49/month.",
+		});
 
 		// Create a container for the buttons
 		const buttonContainer = contentEl.createDiv({
@@ -458,32 +463,42 @@ class SyncEmailModal extends Modal {
 			cls: "taskrobin-helper-description",
 		});
 
+		const connectionStatus = helperDescription.createEl("p");
+		setIcon(connectionStatus, "circle-check");
+		connectionStatus.appendText(" Ready to sync emails from  "); // Add forwarding email with formatting
+		const connectionForwardingEmailSpan = connectionStatus.createEl(
+			"span",
+			{
+				cls: "mono-text-span",
+			}
+		);
+		connectionForwardingEmailSpan.setText(
+			`${this.plugin.settings.forwardingEmailAlias}@taskrobin.io`
+		);
+
 		// Create paragraph with formatted email addresses
 		const emailInfoParagraph = helperDescription.createEl("p");
-		emailInfoParagraph.appendText("Download emails sent from ");
+		setIcon(emailInfoParagraph, "send-horizontal");
+		emailInfoParagraph.appendText(" Send emails from ");
 
 		// Add source email with formatting
 		const sourceEmailSpan = emailInfoParagraph.createEl("span", {
-			cls: "taskrobin-email-address",
+			cls: "mono-text-span",
 		});
 		sourceEmailSpan.setText(this.plugin.settings.emailAddress);
-		sourceEmailSpan.setAttr(
-			"style",
-			"font-family: monospace; background-color: var(--background-secondary); padding: 0 4px; border-radius: 4px;"
-		);
 
 		emailInfoParagraph.appendText(" to ");
 
 		// Add forwarding email with formatting
 		const forwardingEmailSpan = emailInfoParagraph.createEl("span", {
-			cls: "taskrobin-email-address",
+			cls: "mono-text-span",
 		});
 		forwardingEmailSpan.setText(
 			`${this.plugin.settings.forwardingEmailAlias}@taskrobin.io`
 		);
-		forwardingEmailSpan.setAttr(
-			"style",
-			"font-family: monospace; background-color: var(--background-secondary); padding: 0 4px; border-radius: 4px;"
+
+		emailInfoParagraph.appendText(
+			". Then click the 'Sync now' button to download email messages into your vault. "
 		);
 
 		// Add directory information
@@ -493,33 +508,34 @@ class SyncEmailModal extends Modal {
 
 		// Create paragraph with formatted directory path
 		const directoryParagraph = directoryInfo.createEl("p");
-		directoryParagraph.appendText("Emails will be saved in your vault: ");
+		setIcon(directoryParagraph, "save");
+		directoryParagraph.appendText(
+			" Emails will be saved in your vault at: "
+		);
 
 		// Add directory path with formatting
 		const directoryPathSpan = directoryParagraph.createEl("span", {
-			cls: "taskrobin-directory-path",
+			cls: "mono-text-span",
 		});
 		directoryPathSpan.setText(`/${this.plugin.settings.rootDirectory}/`);
-		directoryPathSpan.setAttr(
-			"style",
-			"font-family: monospace; background-color: var(--background-secondary); padding: 0 4px; border-radius: 4px;"
-		);
 
 		// Add attachment status
-		directoryInfo.createEl("p", {
-			text: `Attachments will be ${
+		directoryParagraph.appendText(
+			`. Attachments will be ${
 				this.plugin.settings.downloadAttachments
 					? "downloaded"
 					: "ignored"
-			}`,
-			cls: "attachment-status",
-		});
+			}`
+		);
 
 		// Add TaskRobin.io link
-		const taskRobinLink = directoryInfo.createEl("p", {
-			cls: "taskrobin-link",
+		const taskRobinInfoFooter = directoryInfo.createEl("p", {
+			cls: ["taskrobin-help-text", "taskrobin-footer"],
 		});
-		const link = taskRobinLink.createEl("a", {
+		taskRobinInfoFooter.createEl("p", {
+			text: "TaskRobin integrates emails from any email provider to Obsidian, Notion, Airtable and Google Drive.",
+		});
+		const link = taskRobinInfoFooter.createEl("a", {
 			text: "Visit TaskRobin.io for more information",
 			href: "https://www.taskrobin.io",
 		});
@@ -798,7 +814,9 @@ class SettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Access token")
-			.setDesc("Your TaskRobin integration access token")
+			.setDesc(
+				"Your TaskRobin integration access token. DO NOT SHARE THIS."
+			)
 			.addText((text) =>
 				text
 					.setPlaceholder(

@@ -84,7 +84,13 @@ If your plugin does not need CSS, delete this file.
 	display: block !important;
 }
 
-.taskrobin-link {
+.taskrobin-footer {
 	margin-top: 3em;
-	font-size: 0.7em;
+}
+
+.mono-text-span {
+	font-family: monospace;
+	background-color: var(--background-secondary);
+	padding: 0 4px;
+	border-radius: 4px;
 }
