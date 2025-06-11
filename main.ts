@@ -662,30 +662,39 @@ class SyncEmailModal extends Modal {
 						const downloadPromises = Object.entries(files).map(
 							async ([fileName, fileUrl]) => {
 								try {
-									// Fetch the file
-									const fileResponse = await fetch(fileUrl, {
-										mode: "cors",
-										credentials: "omit", // Don't send credentials for presigned URLs
-									});
-									if (!fileResponse.ok) {
-										throw new Error(
-											`Failed to download ${fileName}: ${fileResponse.status} ${fileResponse.statusText}`
-										);
-									}
-
-									// Convert to array buffer
-									const fileData =
-										await fileResponse.arrayBuffer();
-
 									// Save file to vault with subject prefix for markdown files
 									const finalFileName =
 										fileName.endsWith(".md") && subject
 											? `${subject}-${fileName}`
 											: fileName;
-									await this.app.vault.createBinary(
-										`${emailFolderPath}/${finalFileName}`,
-										fileData
-									);
+									const finalFilePath = `${emailFolderPath}/${finalFileName}`;
+									const finalFilePathExists =
+										(await this.app.vault.getAbstractFileByPath(
+											finalFilePath
+										)) !== null;
+									// Only fetch files from remote if local file does not already exist
+									if (!finalFilePathExists) {
+										// Fetch the file
+										const fileResponse = await fetch(
+											fileUrl,
+											{
+												mode: "cors",
+												credentials: "omit", // Don't send credentials for presigned URLs
+											}
+										);
+										if (!fileResponse.ok) {
+											throw new Error(
+												`Failed to download ${fileName}: ${fileResponse.status} ${fileResponse.statusText}`
+											);
+										}
+										// Convert to array buffer
+										const fileData =
+											await fileResponse.arrayBuffer();
+										await this.app.vault.createBinary(
+											finalFilePath,
+											fileData
+										);
+									}
 								} catch (error) {
 									console.error(
 										`Error downloading file ${fileName}:`,
@@ -796,6 +805,33 @@ class SettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
+
+		// Check if the required settings are empty
+		if (
+			!this.plugin.settings.emailAddress ||
+			!this.plugin.settings.accessToken ||
+			!this.plugin.settings.rootDirectory
+		) {
+			// Display setup button when required settings are missing
+			new Setting(containerEl)
+				.setName("TaskRobin Setup")
+				.setDesc(
+					"Complete the setup process to start syncing emails to your Obsidian vault. TaskRobin helps you sync your emails to Obsidian through email forwarding. Complete the setup to get started."
+				)
+				.addButton((button) =>
+					button
+						.setButtonText("Setup TaskRobin")
+						.setCta()
+						.onClick(() => {
+							new SetupIntegrationModal(
+								this.app,
+								this.plugin
+							).open();
+						})
+				);
+
+			return;
+		}
 
 		new Setting(containerEl)
 			.setName("Your email inbox address")
