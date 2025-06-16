@@ -1,7 +1,7 @@
 {
 	"id": "taskrobin",
 	"name": "Sync Emails",
-	"version": "1.0.5",
+	"version": "1.0.6",
 	"minAppVersion": "0.15.0",
 	"description": "Sync and save emails and attachment files to your vault with TaskRobin.",
 	"author": "TaskRobin",

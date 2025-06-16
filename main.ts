@@ -717,8 +717,15 @@ class SyncEmailModal extends Modal {
 			// Format the date as YYYY-MM-DD
 			const formattedDate = date.toISOString().split("T")[0];
 
-			// Combine date and subject
-			return `${formattedDate} ${subject}`;
+			// Use default if subject is empty or only whitespace
+			const rawName = `${formattedDate} ${
+				subject?.trim() || "No Subject"
+			}`;
+
+			// Remove trailing dots or spaces
+			const safeName = rawName.replace(/[. ]+$/, "");
+
+			return safeName;
 		}
 
 		// Handle sync button click
