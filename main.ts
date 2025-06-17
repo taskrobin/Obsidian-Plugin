@@ -712,7 +712,7 @@ class SyncEmailModal extends Modal {
 			const timestamp = Math.floor(parseInt(emailId) / 1000000);
 
 			// Create a Date object from the Unix timestamp
-			const date = new Date(timestamp * 1000);
+			const date = new Date(timestamp * 100);
 
 			// Format the date as YYYY-MM-DD
 			const formattedDate = date.toISOString().split("T")[0];
