@@ -712,7 +712,7 @@ class SyncEmailModal extends Modal {
 			const timestamp = Math.floor(parseInt(emailId) / 1000000);
 
 			// Create a Date object from the Unix timestamp
-			const date = new Date(timestamp * 100);
+			const date = new Date(timestamp * 1000);
 
 			// Format the date as YYYY-MM-DD
 			const formattedDate = date.toISOString().split("T")[0];
@@ -722,8 +722,11 @@ class SyncEmailModal extends Modal {
 				subject?.trim() || "No Subject"
 			}`;
 
-			// Remove trailing dots or spaces
-			const safeName = rawName.replace(/[. ]+$/, "");
+			// Remove invalid file system characters: * " \ / < > : | ?
+			// Also remove trailing dots or spaces which are problematic in Windows
+			const safeName = rawName
+				.replace(/[\*"\\\/\<\>\:\|\?]/g, "_") // Replace invalid chars with underscore
+				.replace(/[. ]+$/, ""); // Remove trailing dots or spaces
 
 			return safeName;
 		}
