@@ -1,7 +1,7 @@
 import { App, Modal, Notice } from "obsidian";
-import TaskRobinPlugin from "../main";
 import { createIntegration } from "../api";
-import { isValidEmail, isTaskRobinEmail } from "../utils";
+import TaskRobinPlugin from "../main";
+import { isTaskRobinEmail, isValidEmail } from "../utils";
 
 export class SetupIntegrationModal extends Modal {
 	plugin: TaskRobinPlugin;
@@ -14,10 +14,15 @@ export class SetupIntegrationModal extends Modal {
 		this.plugin = plugin;
 	}
 
-	async handleIntegrationCreation(sourceEmail: string, forwardingEmailAlias: string) {
+	async handleIntegrationCreation(
+		sourceEmail: string,
+		forwardingEmailAlias: string
+	) {
 		if (this.isSubmitting) return;
 
-		const submitButton = this.contentEl.querySelector(".taskrobin-submit") as HTMLButtonElement;
+		const submitButton = this.contentEl.querySelector(
+			".taskrobin-submit"
+		) as HTMLButtonElement;
 		if (submitButton) {
 			submitButton.disabled = true;
 			submitButton.setText("Creating integration...");
@@ -25,12 +30,16 @@ export class SetupIntegrationModal extends Modal {
 		this.isSubmitting = true;
 
 		try {
-			const payload = await createIntegration(sourceEmail, forwardingEmailAlias);
+			const payload = await createIntegration(
+				sourceEmail,
+				forwardingEmailAlias
+			);
 
 			if (payload.status === "success") {
 				this.plugin.settings.accessToken = payload.accessToken;
 				this.plugin.settings.emailAddress = sourceEmail;
-				this.plugin.settings.forwardingEmailAlias = forwardingEmailAlias;
+				this.plugin.settings.forwardingEmailAlias =
+					forwardingEmailAlias;
 				await this.plugin.saveSettings();
 
 				new Notice("Integration created successfully!");
@@ -41,7 +50,9 @@ export class SetupIntegrationModal extends Modal {
 			}
 		} catch (error) {
 			console.error("Failed to create integration:", error);
-			new Notice("Failed to create integration. Please check your network connection and try again.");
+			new Notice(
+				"Failed to create integration. Please check your network connection and try again."
+			);
 		} finally {
 			this.isSubmitting = false;
 			if (submitButton) {
@@ -58,45 +69,82 @@ export class SetupIntegrationModal extends Modal {
 		contentEl.createEl("h2", { text: "Setup email sync" });
 
 		// Explanation section
-		const explanationEl = contentEl.createEl("div", { cls: "taskrobin-explanation" });
+		const explanationEl = contentEl.createEl("div", {
+			cls: "taskrobin-explanation",
+		});
 		explanationEl.createEl("p", {
 			text: "TaskRobin helps you sync your emails to Obsidian through email forwarding. Here's how it works:",
 		});
 
 		const stepsList = explanationEl.createEl("ul");
-		stepsList.createEl("li", { text: "1. Enter your email address that you'll forward emails from" });
-		stepsList.createEl("li", { text: "2. Create a TaskRobin forwarding address that will receive your emails" });
-		stepsList.createEl("li", { text: "3. Choose where to save your emails in Obsidian" });
+		stepsList.createEl("li", {
+			text: "1. Enter your email address that you'll forward emails from",
+		});
+		stepsList.createEl("li", {
+			text: "2. Create a TaskRobin forwarding address that will receive your emails",
+		});
+		stepsList.createEl("li", {
+			text: "3. Choose where to save your emails in Obsidian",
+		});
 
 		// Input fields section
-		const inputsContainer = contentEl.createEl("div", { cls: "taskrobin-inputs" });
+		const inputsContainer = contentEl.createEl("div", {
+			cls: "taskrobin-inputs",
+		});
 
 		// Source Email input
-		const sourceEmailContainer = inputsContainer.createEl("div", { cls: "taskrobin-input-group" });
-		sourceEmailContainer.createEl("label", { text: "Email address to sync emails from:" });
+		const sourceEmailContainer = inputsContainer.createEl("div", {
+			cls: "taskrobin-input-group",
+		});
+		sourceEmailContainer.createEl("label", {
+			text: "Email address to sync emails from:",
+		});
 		const sourceEmailInput = sourceEmailContainer.createEl("input", {
 			type: "email",
 			placeholder: "your.email@example.com",
 			value: this.plugin.settings.emailAddress,
 		});
-		const sourceEmailError = sourceEmailContainer.createEl("div", { cls: "taskrobin-error-message" });
-		sourceEmailError.setAttr("style", "color: red; display: none; font-size: 12px; margin-top: 4px;");
+		const sourceEmailError = sourceEmailContainer.createEl("div", {
+			cls: "taskrobin-error-message",
+		});
+		sourceEmailError.setAttr(
+			"style",
+			"color: red; display: none; font-size: 12px; margin-top: 4px;"
+		);
 
 		// Forwarding address input
-		const forwardingContainer = inputsContainer.createEl("div", { cls: "taskrobin-input-group" });
-		forwardingContainer.createEl("label", { text: "Choose your forwarding address:" });
-		const forwardingInputWrapper = forwardingContainer.createEl("div", { cls: "taskrobin-forwarding-wrapper" });
+		const forwardingContainer = inputsContainer.createEl("div", {
+			cls: "taskrobin-input-group",
+		});
+		forwardingContainer.createEl("label", {
+			text: "Choose your forwarding address:",
+		});
+		const forwardingInputWrapper = forwardingContainer.createEl("div", {
+			cls: "taskrobin-forwarding-wrapper",
+		});
 		const forwardingInput = forwardingInputWrapper.createEl("input", {
 			type: "text",
 			placeholder: "obsidian",
 		});
-		forwardingInputWrapper.createEl("span", { cls: "taskrobin-domain", text: "@taskrobin.io" });
-		const forwardingEmailError = forwardingContainer.createEl("div", { cls: "taskrobin-error-message" });
-		forwardingEmailError.setAttr("style", "color: red; display: none; font-size: 12px; margin-top: 4px;");
+		forwardingInputWrapper.createEl("span", {
+			cls: "taskrobin-domain",
+			text: "@taskrobin.io",
+		});
+		const forwardingEmailError = forwardingContainer.createEl("div", {
+			cls: "taskrobin-error-message",
+		});
+		forwardingEmailError.setAttr(
+			"style",
+			"color: red; display: none; font-size: 12px; margin-top: 4px;"
+		);
 
 		// Root directory input
-		const directoryContainer = inputsContainer.createEl("div", { cls: "taskrobin-input-group" });
-		directoryContainer.createEl("label", { text: "Where should emails be saved in the vault?" });
+		const directoryContainer = inputsContainer.createEl("div", {
+			cls: "taskrobin-input-group",
+		});
+		directoryContainer.createEl("label", {
+			text: "Where should emails be saved in the vault?",
+		});
 		const directoryInput = directoryContainer.createEl("input", {
 			type: "text",
 			placeholder: "Emails",
@@ -118,10 +166,17 @@ export class SetupIntegrationModal extends Modal {
 		});
 
 		// Buttons
-		const buttonContainer = contentEl.createDiv({ cls: "taskrobin-button-container" });
-		const confirmButton = buttonContainer.createEl("button", { text: "Confirm settings", cls: "mod-cta" });
+		const buttonContainer = contentEl.createDiv({
+			cls: "taskrobin-button-container",
+		});
+		const confirmButton = buttonContainer.createEl("button", {
+			text: "Confirm settings",
+			cls: "mod-cta",
+		});
 		confirmButton.disabled = true;
-		const settingsButton = buttonContainer.createEl("button", { text: "Advanced settings" });
+		const settingsButton = buttonContainer.createEl("button", {
+			text: "Advanced settings",
+		});
 
 		const validateInputs = () => {
 			let isValid = true;
@@ -133,7 +188,10 @@ export class SetupIntegrationModal extends Modal {
 				sourceEmailError.setText("Email address is required");
 				sourceEmailError.classList.add("visible");
 				isValid = false;
-			} else if (!isValidEmail(sourceEmail) || isTaskRobinEmail(sourceEmail)) {
+			} else if (
+				!isValidEmail(sourceEmail) ||
+				isTaskRobinEmail(sourceEmail)
+			) {
 				sourceEmailError.setText("Please enter a valid email address.");
 				sourceEmailError.classList.add("visible");
 				isValid = false;
@@ -147,14 +205,20 @@ export class SetupIntegrationModal extends Modal {
 				forwardingEmailError.classList.add("visible");
 				isValid = false;
 			} else if (!/^[a-zA-Z0-9-_]+$/.test(forwardingAlias)) {
-				forwardingEmailError.setText("Only letters, numbers, hyphens, and underscores are allowed");
+				forwardingEmailError.setText(
+					"Only letters, numbers, hyphens, and underscores are allowed"
+				);
 				forwardingEmailError.classList.add("visible");
 				isValid = false;
 			} else {
 				forwardingEmailError.classList.remove("visible");
 			}
 
-			confirmButton.disabled = !isValid || !sourceEmail || !forwardingAlias || !directoryInput.value;
+			confirmButton.disabled =
+				!isValid ||
+				!sourceEmail ||
+				!forwardingAlias ||
+				!directoryInput.value;
 			return isValid;
 		};
 
@@ -168,7 +232,9 @@ export class SetupIntegrationModal extends Modal {
 		});
 
 		forwardingInput.addEventListener("input", (e) => {
-			this.forwardingEmailAlias = (e.target as HTMLInputElement).value.trim();
+			this.forwardingEmailAlias = (
+				e.target as HTMLInputElement
+			).value.trim();
 		});
 
 		confirmButton.addEventListener("click", async () => {
@@ -181,15 +247,17 @@ export class SetupIntegrationModal extends Modal {
 			confirmButton.setText("Creating...");
 
 			const directory = directoryInput.value.replace(/^\/+|\/+$/g, "");
-			
+
 			try {
 				await this.handleSubmit();
-				
+
 				this.plugin.settings.emailAddress = this.sourceEmail;
 				this.plugin.settings.rootDirectory = directory || "Emails";
 				await this.plugin.saveSettings();
 
-				const folderExists = (await this.app.vault.getAbstractFileByPath(directory)) !== null;
+				const folderExists =
+					(await this.app.vault.getAbstractFileByPath(directory)) !==
+					null;
 				if (!folderExists) {
 					await this.app.vault.createFolder(directory);
 				}
@@ -218,11 +286,16 @@ export class SetupIntegrationModal extends Modal {
 		}
 
 		if (!/^[a-zA-Z0-9-_]+$/.test(this.forwardingEmailAlias)) {
-			new Notice("Forwarding alias can only contain letters, numbers, hyphens, and underscores");
+			new Notice(
+				"Forwarding alias can only contain letters, numbers, hyphens, and underscores"
+			);
 			return;
 		}
 
-		await this.handleIntegrationCreation(this.sourceEmail, this.forwardingEmailAlias);
+		await this.handleIntegrationCreation(
+			this.sourceEmail,
+			this.forwardingEmailAlias
+		);
 	}
 
 	onClose() {

@@ -1,6 +1,6 @@
 import { Plugin, TFile } from "obsidian";
 import { DEFAULT_SETTINGS } from "./constants";
-import { FirstTimeWelcomeModal } from "./FirstTimeWelcomeModal";
+import { FirstTimeWelcomeModal } from "./modals/FirstTimeWelcomeModal";
 import { SetupIntegrationModal } from "./modals/SetupIntegrationModal";
 import { SyncEmailModal } from "./modals/SyncEmailModal";
 import { SettingTab } from "./SettingTab";

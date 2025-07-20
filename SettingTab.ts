@@ -1,6 +1,6 @@
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
-import { FirstTimeWelcomeModal } from "./FirstTimeWelcomeModal";
 import TaskRobinPlugin from "./main";
+import { FirstTimeWelcomeModal } from "./modals/FirstTimeWelcomeModal";
 import { SetupIntegrationModal } from "./modals/SetupIntegrationModal";
 
 export class SettingTab extends PluginSettingTab {
@@ -149,7 +149,9 @@ export class SettingTab extends PluginSettingTab {
 		// Add sync on launch toggle
 		new Setting(containerEl)
 			.setName("Sync emails on Obsidian launch")
-			.setDesc("When enabled, emails will be automatically synced when Obsidian starts")
+			.setDesc(
+				"When enabled, emails will be automatically synced when Obsidian starts"
+			)
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.syncOnLaunch)

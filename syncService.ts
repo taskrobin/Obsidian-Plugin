@@ -1,19 +1,18 @@
 import { App, Notice } from "obsidian";
 import { syncEmails } from "./api";
 import { TaskRobinPluginSettings } from "./types";
-import { formatEmailFolderName } from "./utils";
+import { formatEmailFolderName, sanitizeFileName } from "./utils";
 
 export async function performEmailSync(
 	app: App,
 	settings: TaskRobinPluginSettings
 ): Promise<void> {
 	try {
+		new Notice(`Syncing your emails...`);
 		const data = await syncEmails(
 			settings.emailAddress,
 			settings.accessToken
 		);
-
-		new Notice(`Syncing your emails...`);
 
 		for (const emailGroup of data.emails) {
 			for (const [emailId, files] of Object.entries(emailGroup)) {
@@ -42,10 +41,11 @@ export async function performEmailSync(
 				const downloadPromises = Object.entries(files).map(
 					async ([fileName, fileUrl]) => {
 						try {
-							const finalFileName =
+							const mdFileName =
 								fileName.endsWith(".md") && subject
 									? `${subject}-${fileName}`
 									: fileName;
+							const finalFileName = sanitizeFileName(mdFileName);
 							const finalFilePath = `${emailFolderPath}/${finalFileName}`;
 							const finalFilePathExists =
 								(await app.vault.getAbstractFileByPath(
@@ -80,9 +80,10 @@ export async function performEmailSync(
 				);
 
 				await Promise.all(downloadPromises);
-				new Notice(`Sync completed! Files saved in ${emailFolderPath}`);
+				new Notice(`Email files saved in ${emailFolderPath}`);
 			}
 		}
+		new Notice(`Email sync completed!`);
 	} catch (error) {
 		console.error("Sync error:", error);
 		new Notice("Failed to sync. Check console for details.");

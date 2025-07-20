@@ -28,3 +28,7 @@ export function isValidEmail(email: string): boolean {
 export function isTaskRobinEmail(email: string): boolean {
 	return email.toLowerCase().endsWith("@taskrobin.io");
 }
+
+export function sanitizeFileName(fileName: string): string {
+	return fileName.replace(/[*"\/<>:|?]/g, "_");
+}
