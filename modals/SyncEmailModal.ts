@@ -2,6 +2,8 @@ import { App, Modal, Notice, setIcon } from "obsidian";
 import { deleteIntegration } from "../api";
 import TaskRobinPlugin from "../main";
 import { performEmailSync } from "../syncService";
+import { Integration } from "../types";
+import { SetupIntegrationModal } from "./SetupIntegrationModal";
 
 export class SyncEmailModal extends Modal {
 	plugin: TaskRobinPlugin;
@@ -11,116 +13,74 @@ export class SyncEmailModal extends Modal {
 		this.plugin = plugin;
 	}
 
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.empty();
-
-		contentEl.createEl("h2", { text: `Sync emails with TaskRobin` });
-
-		const helperDescription = contentEl.createEl("div", {
-			cls: "taskrobin-helper-description",
+	/**
+	 * Creates a card for a single integration
+	 */
+	private createIntegrationCard(
+		integration: Integration,
+		container: HTMLElement
+	) {
+		const card = container.createEl("div", {
+			cls: "taskrobin-integration-card",
 		});
 
-		const connectionStatus = helperDescription.createEl("p");
-		setIcon(connectionStatus, "circle-check");
-		connectionStatus.appendText(" Ready to sync emails from  ");
-		const connectionForwardingEmailSpan = connectionStatus.createEl(
-			"span",
-			{ cls: "mono-text-span" }
-		);
-		connectionForwardingEmailSpan.setText(
-			`${this.plugin.settings.forwardingEmailAlias}@taskrobin.io`
+		// Card header with forwarding alias info
+		const cardHeader = card.createEl("div", {
+			cls: "taskrobin-card-header",
+		});
+
+		const forwardingAliasTitle = cardHeader.createEl("h3");
+		forwardingAliasTitle.setText(
+			`${integration.forwardingEmailAlias}@taskrobin.io`
 		);
 
-		// Create paragraph with formatted email addresses
-		const emailInfoParagraph = helperDescription.createEl("p");
-		setIcon(emailInfoParagraph, "send-horizontal");
-		emailInfoParagraph.appendText(" Send emails from ");
+		// Card content with forwarding address and directory
+		const cardContent = card.createEl("div", {
+			cls: "taskrobin-card-content",
+		});
 
-		const sourceEmailSpan = emailInfoParagraph.createEl("span", {
+		// Forwarding address info is now in the header, so we don't need this section
+
+		// Directory info
+		const directoryInfo = cardContent.createEl("div", {
+			cls: "taskrobin-card-info-row",
+		});
+		setIcon(directoryInfo, "folder");
+		directoryInfo.appendText(" Saved to: ");
+		const directoryPathSpan = directoryInfo.createEl("span", {
 			cls: "mono-text-span",
 		});
-		sourceEmailSpan.setText(this.plugin.settings.emailAddress);
+		directoryPathSpan.setText(`/${integration.rootDirectory}/`);
 
-		emailInfoParagraph.appendText(" to ");
-
-		const forwardingEmailSpan = emailInfoParagraph.createEl("span", {
-			cls: "mono-text-span",
-		});
-		forwardingEmailSpan.setText(
-			`${this.plugin.settings.forwardingEmailAlias}@taskrobin.io`
-		);
-
-		emailInfoParagraph.appendText(
-			". Then click the 'Sync now' button to download email messages into your vault. "
-		);
-
-		// Add directory information
-		const directoryInfo = contentEl.createEl("div", {
-			cls: "taskrobin-directory-info",
-		});
-
-		const directoryParagraph = directoryInfo.createEl("p");
-		setIcon(directoryParagraph, "save");
-		directoryParagraph.appendText(
-			" Emails will be saved in your vault at: "
-		);
-
-		const directoryPathSpan = directoryParagraph.createEl("span", {
-			cls: "mono-text-span",
-		});
-		directoryPathSpan.setText(`/${this.plugin.settings.rootDirectory}/`);
-
-		directoryParagraph.appendText(
-			`. Attachments will be ${
-				this.plugin.settings.downloadAttachments
-					? "downloaded"
-					: "ignored"
-			}`
-		);
-
-		// Add TaskRobin.io link
-		const taskRobinInfoFooter = directoryInfo.createEl("p", {
-			cls: ["taskrobin-help-text", "taskrobin-footer"],
-		});
-		taskRobinInfoFooter.createEl("p", {
-			text: "TaskRobin integrates emails from any email provider to Obsidian, Notion, Airtable and Google Drive.",
-		});
-		const link = taskRobinInfoFooter.createEl("a", {
-			text: "Visit TaskRobin.io for more information",
-			href: "https://www.taskrobin.io",
-		});
-		link.setAttr("target", "_blank");
-		link.setAttr("rel", "noopener noreferrer");
-
-		// Directory status check
+		// Check if directory exists
 		try {
 			const folderExists = this.app.vault.getAbstractFileByPath(
-				this.plugin.settings.rootDirectory
+				integration.rootDirectory
 			);
 			if (!folderExists) {
-				directoryInfo.createEl("p", {
+				cardContent.createEl("div", {
 					text: "Warning: Directory does not exist. It will be created when syncing.",
-					cls: "directory-warning",
+					cls: "directory-warning taskrobin-card-info-row",
 				});
 			}
 		} catch (error) {
 			console.error("Error checking directory:", error);
 		}
 
-		// Buttons
-		const buttonContainer = contentEl.createDiv({
-			cls: "taskrobin-button-container",
+		// Card actions
+		const cardActions = card.createEl("div", {
+			cls: "taskrobin-card-actions",
 		});
-		const syncButton = buttonContainer.createEl("button", {
+
+		// Sync button
+		const syncButton = cardActions.createEl("button", {
 			text: "Sync now",
 			cls: "mod-cta",
 		});
-		const settingsButton = buttonContainer.createEl("button", {
-			text: "Open settings",
-		});
-		const deleteButton = buttonContainer.createEl("button", {
-			text: "Delete integration",
+
+		// Delete button
+		const deleteButton = cardActions.createEl("button", {
+			text: "Delete",
 			cls: "mod-warning",
 		});
 
@@ -129,7 +89,14 @@ export class SyncEmailModal extends Modal {
 			try {
 				syncButton.disabled = true;
 				syncButton.setText("Syncing...");
-				await performEmailSync(this.app, this.plugin.settings);
+				await performEmailSync(
+					this.app,
+					this.plugin.settings,
+					integration
+				);
+				new Notice(
+					`Sync completed for ${this.plugin.settings.emailAddress} (${integration.forwardingEmailAlias})`
+				);
 			} catch (error) {
 				// Error handling is done in performEmailSync
 			} finally {
@@ -146,21 +113,27 @@ export class SyncEmailModal extends Modal {
 
 				const payload = await deleteIntegration(
 					this.plugin.settings.emailAddress,
-					this.plugin.settings.forwardingEmailAlias,
+					integration.forwardingEmailAlias,
 					this.plugin.settings.accessToken
 				);
 
 				if (payload.status === "success") {
-					this.plugin.settings.emailAddress = "";
-					this.plugin.settings.accessToken = "";
-					this.plugin.settings.forwardingEmailAlias = "";
+					// Remove this integration from the array
+					this.plugin.settings.integrations =
+						this.plugin.settings.integrations.filter(
+							(i) =>
+								i.forwardingEmailAlias !==
+								integration.forwardingEmailAlias
+						);
 					await this.plugin.saveSettings();
+
+					// Refresh the modal
+					this.onOpen();
 				} else {
-					throw new Error("Failed to delete user mapping");
+					throw new Error("Failed to delete integration");
 				}
 
 				new Notice("Integration successfully deleted!");
-				this.close();
 			} catch (error) {
 				console.error("Delete error:", error);
 				new Notice(
@@ -168,8 +141,88 @@ export class SyncEmailModal extends Modal {
 				);
 			} finally {
 				deleteButton.disabled = false;
-				deleteButton.setText("Delete integration");
+				deleteButton.setText("Delete");
 			}
+		});
+	}
+
+	onOpen() {
+		const { contentEl } = this;
+		contentEl.empty();
+
+		contentEl.createEl("h2", { text: `Sync emails with TaskRobin` });
+
+		// Show the shared email address at the top
+		const sharedEmailInfo = contentEl.createEl("div", {
+			cls: "taskrobin-shared-email-info",
+		});
+		setIcon(sharedEmailInfo, "mail");
+		sharedEmailInfo.appendText(" Your email inbox: ");
+		const sharedEmailSpan = sharedEmailInfo.createEl("span", {
+			cls: "mono-text-span",
+		});
+		sharedEmailSpan.setText(this.plugin.settings.emailAddress);
+		contentEl.createEl("p", {
+			text: " Send emails from your email inbox to the following TaskRobin forwarding address, then sync these emails to the respective Obsidian vault folders. ",
+		});
+
+		// Container for integration cards
+		const integrationsContainer = contentEl.createEl("div", {
+			cls: "taskrobin-integrations-container",
+		});
+
+		// Create cards for each integration
+		if (this.plugin.settings.integrations.length > 0) {
+			for (const integration of this.plugin.settings.integrations) {
+				this.createIntegrationCard(integration, integrationsContainer);
+			}
+		}
+		// Legacy support
+		else if (
+			this.plugin.settings.emailAddress &&
+			this.plugin.settings.forwardingEmailAlias
+		) {
+			// Create a temporary integration object from legacy settings
+			const legacyIntegration: Integration = {
+				forwardingEmailAlias: this.plugin.settings.forwardingEmailAlias,
+				rootDirectory: this.plugin.settings.rootDirectory,
+			};
+			this.createIntegrationCard(
+				legacyIntegration,
+				integrationsContainer
+			);
+		}
+
+		// Add TaskRobin.io link
+		const taskRobinInfoFooter = contentEl.createEl("div", {
+			cls: ["taskrobin-help-text", "taskrobin-footer"],
+		});
+		taskRobinInfoFooter.createEl("p", {
+			text: "TaskRobin integrates emails from any email provider to Obsidian, Notion, Airtable and Google Drive.",
+		});
+		const link = taskRobinInfoFooter.createEl("a", {
+			text: "Visit TaskRobin.io for more information",
+			href: "https://www.taskrobin.io",
+		});
+		link.setAttr("target", "_blank");
+		link.setAttr("rel", "noopener noreferrer");
+
+		// Add integration button
+		const buttonContainer = contentEl.createDiv({
+			cls: "taskrobin-button-container",
+		});
+		const addIntegrationButton = buttonContainer.createEl("button", {
+			text: "Add integration",
+			cls: "mod-cta",
+		});
+		const settingsButton = buttonContainer.createEl("button", {
+			text: "Open settings",
+		});
+
+		// Handle add integration button click
+		addIntegrationButton.addEventListener("click", () => {
+			this.close();
+			new SetupIntegrationModal(this.app, this.plugin).open();
 		});
 
 		// Settings button event listener

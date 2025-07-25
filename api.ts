@@ -1,7 +1,10 @@
 import { OBSIDIAN_API } from "./constants";
 import { SyncResponse } from "./types";
 
-export async function createIntegration(sourceEmail: string, forwardingEmailAlias: string) {
+export async function createIntegration(
+	sourceEmail: string,
+	forwardingEmailAlias: string
+) {
 	const response = await fetch(`${OBSIDIAN_API}/mappings`, {
 		method: "POST",
 		headers: {
@@ -16,8 +19,16 @@ export async function createIntegration(sourceEmail: string, forwardingEmailAlia
 	return await response.json();
 }
 
-export async function syncEmails(emailAddress: string, accessToken: string): Promise<SyncResponse> {
-	const response = await fetch(`${OBSIDIAN_API}/emails/${emailAddress}`, {
+export async function syncEmails(
+	emailAddress: string,
+	accessToken: string,
+	forwardingEmailAlias?: string
+): Promise<SyncResponse> {
+	const url = forwardingEmailAlias
+		? `${OBSIDIAN_API}/emails/${emailAddress}?forwardingAddress=${forwardingEmailAlias}@taskrobin.io`
+		: `${OBSIDIAN_API}/emails/${emailAddress}`;
+
+	const response = await fetch(url, {
 		method: "GET",
 		headers: {
 			Authorization: `Bearer ${accessToken}`,
@@ -32,7 +43,11 @@ export async function syncEmails(emailAddress: string, accessToken: string): Pro
 	return await response.json();
 }
 
-export async function deleteIntegration(emailAddress: string, forwardingEmailAlias: string, accessToken: string) {
+export async function deleteIntegration(
+	emailAddress: string,
+	forwardingEmailAlias: string,
+	accessToken: string
+) {
 	const response = await fetch(`${OBSIDIAN_API}/mappings`, {
 		method: "DELETE",
 		headers: {

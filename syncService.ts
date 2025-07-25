@@ -1,17 +1,25 @@
 import { App, Notice } from "obsidian";
 import { syncEmails } from "./api";
-import { TaskRobinPluginSettings } from "./types";
+import { Integration, TaskRobinPluginSettings } from "./types";
 import { formatEmailFolderName, sanitizeFileName } from "./utils";
 
 export async function performEmailSync(
 	app: App,
-	settings: TaskRobinPluginSettings
+	settings: TaskRobinPluginSettings,
+	integration?: Integration
 ): Promise<void> {
 	try {
-		new Notice(`Syncing your emails...`);
+		// Use the settings emailAddress and integration-specific rootDirectory if provided
+		const emailAddress = settings.emailAddress;
+		const rootDirectory = integration
+			? integration.rootDirectory
+			: settings.rootDirectory;
+
+		new Notice(`Syncing emails for ${emailAddress}...`);
 		const data = await syncEmails(
-			settings.emailAddress,
-			settings.accessToken
+			emailAddress,
+			settings.accessToken,
+			integration?.forwardingEmailAlias
 		);
 
 		for (const emailGroup of data.emails) {
@@ -30,7 +38,7 @@ export async function performEmailSync(
 				}
 
 				const folderName = formatEmailFolderName(emailId, subject);
-				const emailFolderPath = `${settings.rootDirectory}/${folderName}`;
+				const emailFolderPath = `${rootDirectory}/${folderName}`;
 				const folderExists =
 					(await app.vault.getAbstractFileByPath(emailFolderPath)) !==
 					null;

@@ -11,15 +11,41 @@ export default class TaskRobinPlugin extends Plugin {
 	settings: TaskRobinPluginSettings;
 
 	async showAppropriateModal() {
-		if (!this.settings.emailAddress || !this.settings.accessToken) {
+		if (
+			!this.settings.accessToken ||
+			(this.settings.integrations.length === 0 &&
+				!this.settings.emailAddress)
+		) {
 			new SetupIntegrationModal(this.app, this).open();
 		} else {
 			new SyncEmailModal(this.app, this).open();
 		}
 	}
 
+	/**
+	 * Migrate legacy settings to the new format with multiple integrations
+	 */
+	private migrateSettings() {
+		// If we have legacy settings but no integrations, migrate them
+		if (
+			this.settings.emailAddress &&
+			this.settings.forwardingEmailAlias &&
+			this.settings.integrations.length === 0
+		) {
+			this.settings.integrations.push({
+				forwardingEmailAlias: this.settings.forwardingEmailAlias,
+				rootDirectory: this.settings.rootDirectory,
+			});
+			console.log("Migrated legacy integration to new format");
+		}
+	}
+
 	async onload() {
 		await this.loadSettings();
+
+		// Migrate legacy settings to new format if needed
+		this.migrateSettings();
+
 		if (!this.settings.hasWelcomedUser) {
 			// User onboarding
 			new FirstTimeWelcomeModal(this.app, this).open();
@@ -59,12 +85,29 @@ export default class TaskRobinPlugin extends Plugin {
 			id: "sync-emails",
 			name: "Sync emails now",
 			callback: async () => {
-				if (!this.settings.emailAddress || !this.settings.accessToken) {
+				if (
+					!this.settings.accessToken ||
+					(this.settings.integrations.length === 0 &&
+						!this.settings.emailAddress)
+				) {
 					new SetupIntegrationModal(this.app, this).open();
 					return;
 				}
 				try {
-					await performEmailSync(this.app, this.settings);
+					// If we have integrations, sync all of them
+					if (this.settings.integrations.length > 0) {
+						for (const integration of this.settings.integrations) {
+							await performEmailSync(
+								this.app,
+								this.settings,
+								integration
+							);
+						}
+					}
+					// Legacy support
+					else if (this.settings.emailAddress) {
+						await performEmailSync(this.app, this.settings);
+					}
 				} catch (error) {
 					console.error("Command sync failed:", error);
 				}
@@ -75,15 +118,29 @@ export default class TaskRobinPlugin extends Plugin {
 		this.addSettingTab(new SettingTab(this.app, this));
 
 		// Sync on launch if enabled
-		if (
-			this.settings.syncOnLaunch &&
-			this.settings.emailAddress &&
-			this.settings.accessToken
-		) {
+		if (this.settings.syncOnLaunch && this.settings.accessToken) {
 			setTimeout(() => {
-				performEmailSync(this.app, this.settings).catch((error) => {
-					console.error("Launch sync failed:", error);
-				});
+				// If we have integrations, sync all of them
+				if (this.settings.integrations.length > 0) {
+					for (const integration of this.settings.integrations) {
+						performEmailSync(
+							this.app,
+							this.settings,
+							integration
+						).catch((error) => {
+							console.error(
+								`Launch sync failed for ${this.settings.emailAddress} (${integration.forwardingEmailAlias}):`,
+								error
+							);
+						});
+					}
+				}
+				// Legacy support
+				else if (this.settings.emailAddress) {
+					performEmailSync(this.app, this.settings).catch((error) => {
+						console.error("Launch sync failed:", error);
+					});
+				}
 			}, 2000);
 		}
 	}

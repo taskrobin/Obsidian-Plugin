@@ -1,22 +1,27 @@
 import { App, Modal, Notice } from "obsidian";
 import { createIntegration } from "../api";
 import TaskRobinPlugin from "../main";
+import { Integration } from "../types";
 import { isTaskRobinEmail, isValidEmail } from "../utils";
+import { SyncEmailModal } from "./SyncEmailModal";
 
 export class SetupIntegrationModal extends Modal {
 	plugin: TaskRobinPlugin;
 	private sourceEmail = "";
 	private forwardingEmailAlias = "";
+	private rootDirectory = "";
 	private isSubmitting = false;
 
 	constructor(app: App, plugin: TaskRobinPlugin) {
 		super(app);
 		this.plugin = plugin;
+		this.rootDirectory = this.plugin.settings.rootDirectory;
 	}
 
 	async handleIntegrationCreation(
 		sourceEmail: string,
-		forwardingEmailAlias: string
+		forwardingEmailAlias: string,
+		rootDirectory: string
 	) {
 		if (this.isSubmitting) return;
 
@@ -36,14 +41,32 @@ export class SetupIntegrationModal extends Modal {
 			);
 
 			if (payload.status === "success") {
-				this.plugin.settings.accessToken = payload.accessToken;
+				// Set the access token if it's not already set
+				if (!this.plugin.settings.accessToken) {
+					this.plugin.settings.accessToken = payload.accessToken;
+				}
+
+				// Create a new integration object
+				const newIntegration: Integration = {
+					forwardingEmailAlias: forwardingEmailAlias,
+					rootDirectory: rootDirectory,
+				};
+
+				// Add the new integration to the array
+				this.plugin.settings.integrations.push(newIntegration);
+
+				// For backward compatibility, also set the legacy fields
 				this.plugin.settings.emailAddress = sourceEmail;
 				this.plugin.settings.forwardingEmailAlias =
 					forwardingEmailAlias;
+
 				await this.plugin.saveSettings();
 
 				new Notice("Integration created successfully!");
 				this.close();
+
+				// Open the SyncEmailModal automatically after successful integration
+				new SyncEmailModal(this.app, this.plugin).open();
 			} else {
 				console.error("Integration creation failed:", payload.error);
 				new Notice(`Failed to create integration: ${payload.error}`);
@@ -66,7 +89,9 @@ export class SetupIntegrationModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		contentEl.createEl("h2", { text: "Setup email sync" });
+		contentEl.createEl("h2", {
+			text: "Add new integration",
+		});
 
 		// Explanation section
 		const explanationEl = contentEl.createEl("div", {
@@ -99,11 +124,30 @@ export class SetupIntegrationModal extends Modal {
 		sourceEmailContainer.createEl("label", {
 			text: "Email address to sync emails from:",
 		});
+
+		// If we already have an email address set up, show it as disabled
+		const hasExistingEmail =
+			this.plugin.settings.emailAddress &&
+			this.plugin.settings.integrations.length > 0;
 		const sourceEmailInput = sourceEmailContainer.createEl("input", {
 			type: "email",
 			placeholder: "your.email@example.com",
-			value: this.plugin.settings.emailAddress,
+			value: hasExistingEmail
+				? this.plugin.settings.emailAddress
+				: this.sourceEmail,
 		});
+
+		// Disable the email input if we already have integrations
+		if (hasExistingEmail) {
+			sourceEmailInput.disabled = true;
+			sourceEmailContainer.createEl("div", {
+				cls: "taskrobin-help-text",
+				text: "All integrations share the same email address",
+			});
+			// Set the source email to the existing one
+			this.sourceEmail = this.plugin.settings.emailAddress;
+		}
+
 		const sourceEmailError = sourceEmailContainer.createEl("div", {
 			cls: "taskrobin-error-message",
 		});
@@ -148,7 +192,7 @@ export class SetupIntegrationModal extends Modal {
 		const directoryInput = directoryContainer.createEl("input", {
 			type: "text",
 			placeholder: "Emails",
-			value: this.plugin.settings.rootDirectory,
+			value: this.rootDirectory,
 		});
 		directoryContainer.createEl("div", {
 			cls: "taskrobin-help-text",
@@ -237,6 +281,10 @@ export class SetupIntegrationModal extends Modal {
 			).value.trim();
 		});
 
+		directoryInput.addEventListener("input", (e) => {
+			this.rootDirectory = (e.target as HTMLInputElement).value.trim();
+		});
+
 		confirmButton.addEventListener("click", async () => {
 			if (!validateInputs()) {
 				new Notice("Please fill in all required fields correctly.");
@@ -247,22 +295,18 @@ export class SetupIntegrationModal extends Modal {
 			confirmButton.setText("Creating...");
 
 			const directory = directoryInput.value.replace(/^\/+|\/+$/g, "");
+			this.rootDirectory = directory || "Emails";
 
 			try {
 				await this.handleSubmit();
 
-				this.plugin.settings.emailAddress = this.sourceEmail;
-				this.plugin.settings.rootDirectory = directory || "Emails";
-				await this.plugin.saveSettings();
-
+				// Folder creation is now handled in handleIntegrationCreation
 				const folderExists =
 					(await this.app.vault.getAbstractFileByPath(directory)) !==
 					null;
 				if (!folderExists) {
 					await this.app.vault.createFolder(directory);
 				}
-				new Notice("Settings saved successfully!");
-				this.close();
 			} catch (error) {
 				console.error("Error during setup:", error);
 				new Notice("Failed to save settings. Please try again.");
@@ -294,7 +338,8 @@ export class SetupIntegrationModal extends Modal {
 
 		await this.handleIntegrationCreation(
 			this.sourceEmail,
-			this.forwardingEmailAlias
+			this.forwardingEmailAlias,
+			this.rootDirectory
 		);
 	}
 

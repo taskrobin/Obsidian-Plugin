@@ -94,3 +94,86 @@ If your plugin does not need CSS, delete this file.
 	padding: 0 4px;
 	border-radius: 4px;
 }
+
+/* Integration cards styling */
+.taskrobin-integrations-container {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	margin-bottom: 24px;
+}
+
+.taskrobin-integration-card {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	padding: 16px;
+	background-color: var(--background-secondary);
+	transition: box-shadow 0.2s ease-in-out;
+}
+
+.taskrobin-integration-card:hover {
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.taskrobin-card-header {
+	margin-bottom: 12px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	padding-bottom: 8px;
+}
+
+.taskrobin-card-header h3 {
+	margin: 0;
+	font-size: 1.1em;
+	font-weight: 600;
+}
+
+.taskrobin-card-content {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 16px;
+}
+
+.taskrobin-card-info-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.9em;
+}
+
+.taskrobin-card-info-row svg {
+	width: 16px;
+	height: 16px;
+	color: var(--text-muted);
+}
+
+.taskrobin-card-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 12px;
+}
+
+.directory-warning {
+	color: var(--text-error);
+	font-size: 0.85em;
+	margin-top: 4px;
+}
+
+/* Shared email info styling */
+.taskrobin-shared-email-info {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 16px;
+	padding: 8px 12px;
+	background-color: var(--background-secondary);
+	border-radius: 6px;
+	font-size: 0.95em;
+}
+
+.taskrobin-shared-email-info svg {
+	width: 18px;
+	height: 18px;
+	color: var(--text-accent);
+}
