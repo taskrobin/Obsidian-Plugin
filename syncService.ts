@@ -3,22 +3,77 @@ import { syncEmails } from "./api";
 import { Integration, TaskRobinPluginSettings } from "./types";
 import { formatEmailFolderName, sanitizeFileName } from "./utils";
 
+/**
+ * Get the access token for a specific origin email
+ * @param settings The plugin settings
+ * @param originEmail The origin email to get the access token for
+ * @returns The access token for the origin email, or the legacy access token if not found
+ */
+export function getAccessTokenForEmail(
+	settings: TaskRobinPluginSettings,
+	originEmail: string
+): string {
+	// Look for a matching EmailAuth entry
+	const auth = settings.emailAuths.find(
+		(auth) => auth.originEmail === originEmail
+	);
+
+	// Return the token if found, otherwise fall back to the legacy token
+	return auth?.accessToken || settings.accessToken;
+}
+
+/**
+ * Set the access token for a specific origin email
+ * @param settings The plugin settings
+ * @param originEmail The origin email to set the access token for
+ * @param accessToken The access token to set
+ * @param saveSettings Function to save the settings
+ */
+export async function setAccessTokenForEmail(
+	settings: TaskRobinPluginSettings,
+	originEmail: string,
+	accessToken: string,
+	saveSettings: () => Promise<void>
+): Promise<void> {
+	// Look for a matching EmailAuth entry
+	let auth = settings.emailAuths.find(
+		(auth) => auth.originEmail === originEmail
+	);
+
+	if (auth) {
+		// Update existing auth
+		auth.accessToken = accessToken;
+	} else {
+		// Create new auth entry
+		settings.emailAuths.push({
+			originEmail: originEmail,
+			accessToken: accessToken,
+		});
+	}
+
+	// Save settings
+	await saveSettings();
+}
+
 export async function performEmailSync(
 	app: App,
 	settings: TaskRobinPluginSettings,
 	integration?: Integration
 ): Promise<void> {
 	try {
-		// Use the settings emailAddress and integration-specific rootDirectory if provided
-		const emailAddress = settings.emailAddress;
+		// Use the integration-specific originEmail and rootDirectory if provided
+		// Otherwise fall back to the global emailAddress and rootDirectory
+		const emailAddress = integration?.originEmail || settings.emailAddress;
 		const rootDirectory = integration
 			? integration.rootDirectory
 			: settings.rootDirectory;
 
 		new Notice(`Syncing emails for ${emailAddress}...`);
+		// Get the access token for this email address
+		const accessToken = getAccessTokenForEmail(settings, emailAddress);
 		const data = await syncEmails(
 			emailAddress,
-			settings.accessToken,
+			accessToken,
 			integration?.forwardingEmailAlias
 		);
 

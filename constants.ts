@@ -12,4 +12,5 @@ export const DEFAULT_SETTINGS: TaskRobinPluginSettings = {
 	forwardingEmailAlias: "",
 	syncOnLaunch: false,
 	integrations: [],
+	emailAuths: [],
 };

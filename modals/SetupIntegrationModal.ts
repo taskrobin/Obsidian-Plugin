@@ -1,6 +1,7 @@
 import { App, Modal, Notice } from "obsidian";
 import { createIntegration } from "../api";
 import TaskRobinPlugin from "../main";
+import { setAccessTokenForEmail } from "../syncService";
 import { Integration } from "../types";
 import { isTaskRobinEmail, isValidEmail } from "../utils";
 import { SyncEmailModal } from "./SyncEmailModal";
@@ -19,7 +20,7 @@ export class SetupIntegrationModal extends Modal {
 	}
 
 	async handleIntegrationCreation(
-		sourceEmail: string,
+		originEmail: string,
 		forwardingEmailAlias: string,
 		rootDirectory: string
 	) {
@@ -36,29 +37,37 @@ export class SetupIntegrationModal extends Modal {
 
 		try {
 			const payload = await createIntegration(
-				sourceEmail,
+				originEmail,
 				forwardingEmailAlias
 			);
 
 			if (payload.status === "success") {
-				// Set the access token if it's not already set
-				if (!this.plugin.settings.accessToken) {
-					this.plugin.settings.accessToken = payload.accessToken;
-				}
+				// Store the access token for this origin email
+				await setAccessTokenForEmail(
+					this.plugin.settings,
+					originEmail,
+					payload.accessToken,
+					() => this.plugin.saveSettings()
+				);
 
 				// Create a new integration object
 				const newIntegration: Integration = {
 					forwardingEmailAlias: forwardingEmailAlias,
 					rootDirectory: rootDirectory,
+					originEmail: originEmail,
 				};
 
 				// Add the new integration to the array
 				this.plugin.settings.integrations.push(newIntegration);
 
 				// For backward compatibility, also set the legacy fields
-				this.plugin.settings.emailAddress = sourceEmail;
-				this.plugin.settings.forwardingEmailAlias =
-					forwardingEmailAlias;
+				// Only set these if this is the first integration
+				if (this.plugin.settings.integrations.length === 1) {
+					this.plugin.settings.accessToken = payload.accessToken;
+					this.plugin.settings.emailAddress = originEmail;
+					this.plugin.settings.forwardingEmailAlias =
+						forwardingEmailAlias;
+				}
 
 				await this.plugin.saveSettings();
 
@@ -137,14 +146,13 @@ export class SetupIntegrationModal extends Modal {
 				: this.sourceEmail,
 		});
 
-		// Disable the email input if we already have integrations
+		// Allow users to use different email addresses for different integrations
 		if (hasExistingEmail) {
-			sourceEmailInput.disabled = true;
 			sourceEmailContainer.createEl("div", {
 				cls: "taskrobin-help-text",
-				text: "All integrations share the same email address",
+				text: "You can use a different email address for this integration",
 			});
-			// Set the source email to the existing one
+			// Set the source email to the existing one as a default
 			this.sourceEmail = this.plugin.settings.emailAddress;
 		}
 

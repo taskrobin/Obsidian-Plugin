@@ -116,18 +116,19 @@ If your plugin does not need CSS, delete this file.
 }
 
 .taskrobin-card-header {
-	margin-bottom: 12px;
+	padding: 10px;
+	background-color: var(--background-secondary);
 	border-bottom: 1px solid var(--background-modifier-border);
-	padding-bottom: 8px;
 }
 
 .taskrobin-card-header h3 {
 	margin: 0;
-	font-size: 1.1em;
+	font-size: 16px;
 	font-weight: 600;
 }
 
 .taskrobin-card-content {
+	margin-top: 10px;
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
@@ -176,4 +177,38 @@ If your plugin does not need CSS, delete this file.
 	width: 18px;
 	height: 18px;
 	color: var(--text-accent);
+}
+
+/* Email Authentication styling */
+.taskrobin-auth-container {
+	margin-bottom: 20px;
+}
+
+.taskrobin-auth-heading {
+	margin-bottom: 10px;
+	font-size: 0.9em;
+	color: var(--text-muted);
+}
+
+.taskrobin-auth-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.taskrobin-auth-item {
+	padding: 10px;
+	background-color: var(--background-secondary);
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.taskrobin-auth-email {
+	margin-bottom: 5px;
+}
+
+.taskrobin-auth-token {
+	font-family: var(--font-monospace);
+	font-size: 0.9em;
+	color: var(--text-muted);
 }

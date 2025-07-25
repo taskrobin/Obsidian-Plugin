@@ -1,11 +1,17 @@
 export interface Integration {
 	forwardingEmailAlias: string;
 	rootDirectory: string;
+	originEmail: string;
+}
+
+export interface EmailAuth {
+	originEmail: string;
+	accessToken: string;
 }
 
 export interface TaskRobinPluginSettings {
 	hasWelcomedUser: boolean;
-	accessToken: string;
+	accessToken: string; // Legacy field, kept for backward compatibility
 	rootDirectory: string;
 	downloadAttachments: boolean;
 	syncOnLaunch: boolean;
@@ -14,8 +20,11 @@ export interface TaskRobinPluginSettings {
 	emailAddress: string;
 	forwardingEmailAlias: string;
 
-	// New field for multiple integrations
+	// New fields for multiple integrations
 	integrations: Integration[];
+
+	// New field for email authentication
+	emailAuths: EmailAuth[];
 }
 
 export interface SyncResponse {

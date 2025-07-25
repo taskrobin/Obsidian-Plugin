@@ -31,8 +31,10 @@ export class SettingTab extends PluginSettingTab {
 
 		// Check if the required settings are empty
 		if (
-			!this.plugin.settings.emailAddress ||
-			!this.plugin.settings.accessToken ||
+			(!this.plugin.settings.emailAddress &&
+				this.plugin.settings.emailAuths.length === 0) ||
+			(!this.plugin.settings.accessToken &&
+				this.plugin.settings.emailAuths.length === 0) ||
 			!this.plugin.settings.rootDirectory
 		) {
 			// Display setup button when required settings are missing
@@ -57,9 +59,9 @@ export class SettingTab extends PluginSettingTab {
 		}
 
 		new Setting(containerEl)
-			.setName("Your email inbox address")
+			.setName("Default email inbox address")
 			.setDesc(
-				"The email address that you want to sync emails from, e.g. your-name@gmail.com"
+				"The default email address for new integrations. You can change the origin email address when you create new integrations."
 			)
 			.addText((text) =>
 				text
@@ -67,23 +69,6 @@ export class SettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.emailAddress)
 					.onChange(async (value) => {
 						this.plugin.settings.emailAddress = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Access token")
-			.setDesc(
-				"Your TaskRobin integration access token. Complete the setup process to obtain this key. DO NOT SHARE THIS."
-			)
-			.addText((text) =>
-				text
-					.setPlaceholder(
-						"Enter your TaskRobin integration access token"
-					)
-					.setValue(this.plugin.settings.accessToken)
-					.onChange(async (value) => {
-						this.plugin.settings.accessToken = value;
 						await this.plugin.saveSettings();
 					})
 			);
@@ -160,5 +145,75 @@ export class SettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		// Email Authentication Section
+		containerEl.createEl("h6", { text: "Email Authentication Info" });
+
+		// Display all email-token pairs
+		if (
+			this.plugin.settings.emailAuths &&
+			this.plugin.settings.emailAuths.length > 0
+		) {
+			const authContainer = containerEl.createDiv({
+				cls: "taskrobin-auth-container",
+			});
+
+			// Create a heading for the auth pairs
+			authContainer.createEl("p", {
+				text: "The following email addresses have added with authentication tokens:",
+				cls: "taskrobin-auth-heading",
+			});
+
+			// Create a list of email-token pairs
+			const authList = authContainer.createEl("div", {
+				cls: "taskrobin-auth-list",
+			});
+
+			// Add each email-token pair to the list
+			for (const auth of this.plugin.settings.emailAuths) {
+				const authItem = authList.createEl("div", {
+					cls: "taskrobin-auth-item",
+				});
+
+				// Email address
+				authItem.createEl("div", {
+					text: `Email inbox: ${auth.originEmail}`,
+					cls: "taskrobin-auth-email",
+				});
+
+				// Token (masked)
+				const tokenDisplay = auth.accessToken
+					? `${auth.accessToken.substring(
+							0,
+							5
+					  )}...${auth.accessToken.substring(
+							auth.accessToken.length - 5
+					  )}`
+					: "No token";
+
+				authItem.createEl("div", {
+					text: `Token: ${tokenDisplay}`,
+					cls: "taskrobin-auth-token",
+				});
+			}
+		} else {
+			// Legacy access token display
+			new Setting(containerEl)
+				.setName("Access token (Legacy)")
+				.setDesc(
+					"Your TaskRobin integration access token. Complete the setup process to obtain this key. DO NOT SHARE THIS."
+				)
+				.addText((text) =>
+					text
+						.setPlaceholder(
+							"Enter your TaskRobin integration access token"
+						)
+						.setValue(this.plugin.settings.accessToken)
+						.onChange(async (value) => {
+							this.plugin.settings.accessToken = value;
+							await this.plugin.saveSettings();
+						})
+				);
+		}
 	}
 }

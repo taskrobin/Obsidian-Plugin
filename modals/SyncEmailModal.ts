@@ -1,7 +1,7 @@
 import { App, Modal, Notice, setIcon } from "obsidian";
 import { deleteIntegration } from "../api";
 import TaskRobinPlugin from "../main";
-import { performEmailSync } from "../syncService";
+import { getAccessTokenForEmail, performEmailSync } from "../syncService";
 import { Integration } from "../types";
 import { SetupIntegrationModal } from "./SetupIntegrationModal";
 
@@ -39,14 +39,25 @@ export class SyncEmailModal extends Modal {
 			cls: "taskrobin-card-content",
 		});
 
-		// Forwarding address info is now in the header, so we don't need this section
+		// Show the origin email for this integration
+		const originEmailInfo = cardContent.createEl("div", {
+			cls: "taskrobin-card-info-row",
+		});
+		setIcon(originEmailInfo, "mail");
+		originEmailInfo.appendText(" From: ");
+		const originEmailSpan = originEmailInfo.createEl("span", {
+			cls: "mono-text-span",
+		});
+		originEmailSpan.setText(
+			integration.originEmail || this.plugin.settings.emailAddress
+		);
 
 		// Directory info
 		const directoryInfo = cardContent.createEl("div", {
 			cls: "taskrobin-card-info-row",
 		});
 		setIcon(directoryInfo, "folder");
-		directoryInfo.appendText(" Saved to: ");
+		directoryInfo.appendText(" Saved to vault location: ");
 		const directoryPathSpan = directoryInfo.createEl("span", {
 			cls: "mono-text-span",
 		});
@@ -94,8 +105,12 @@ export class SyncEmailModal extends Modal {
 					this.plugin.settings,
 					integration
 				);
+				// Use integration-specific originEmail if available, otherwise fall back to global emailAddress
+				const emailToUse =
+					integration.originEmail ||
+					this.plugin.settings.emailAddress;
 				new Notice(
-					`Sync completed for ${this.plugin.settings.emailAddress} (${integration.forwardingEmailAlias})`
+					`Sync completed for ${emailToUse} (${integration.forwardingEmailAlias})`
 				);
 			} catch (error) {
 				// Error handling is done in performEmailSync
@@ -111,10 +126,21 @@ export class SyncEmailModal extends Modal {
 				deleteButton.disabled = true;
 				deleteButton.setText("Deleting...");
 
+				// Use integration-specific originEmail if available, otherwise fall back to global emailAddress
+				const emailToUse =
+					integration.originEmail ||
+					this.plugin.settings.emailAddress;
+
+				// Get the access token for this email address
+				const accessToken = getAccessTokenForEmail(
+					this.plugin.settings,
+					emailToUse
+				);
+
 				const payload = await deleteIntegration(
-					this.plugin.settings.emailAddress,
+					emailToUse,
 					integration.forwardingEmailAlias,
-					this.plugin.settings.accessToken
+					accessToken
 				);
 
 				if (payload.status === "success") {
@@ -152,18 +178,9 @@ export class SyncEmailModal extends Modal {
 
 		contentEl.createEl("h2", { text: `Sync emails with TaskRobin` });
 
-		// Show the shared email address at the top
-		const sharedEmailInfo = contentEl.createEl("div", {
-			cls: "taskrobin-shared-email-info",
-		});
-		setIcon(sharedEmailInfo, "mail");
-		sharedEmailInfo.appendText(" Your email inbox: ");
-		const sharedEmailSpan = sharedEmailInfo.createEl("span", {
-			cls: "mono-text-span",
-		});
-		sharedEmailSpan.setText(this.plugin.settings.emailAddress);
+		// Show instructions at the top
 		contentEl.createEl("p", {
-			text: " Send emails from your email inbox to the following TaskRobin forwarding address, then sync these emails to the respective Obsidian vault folders. ",
+			text: "Send emails from your email inbox to the TaskRobin forwarding addresses below, then sync these emails to the respective Obsidian vault folders.",
 		});
 
 		// Container for integration cards
@@ -186,6 +203,7 @@ export class SyncEmailModal extends Modal {
 			const legacyIntegration: Integration = {
 				forwardingEmailAlias: this.plugin.settings.forwardingEmailAlias,
 				rootDirectory: this.plugin.settings.rootDirectory,
+				originEmail: this.plugin.settings.emailAddress,
 			};
 			this.createIntegrationCard(
 				legacyIntegration,
