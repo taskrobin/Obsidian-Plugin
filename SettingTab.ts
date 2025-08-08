@@ -74,9 +74,9 @@ export class SettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Root directory")
+			.setName("Default Vault email folder")
 			.setDesc(
-				"The folder where email content will be saved (folders will be created if they don't exist)"
+				"The default folder where email content will be saved for new integrations. You can change the email destination folder when you create new integrations."
 			)
 			.addText((text) =>
 				text

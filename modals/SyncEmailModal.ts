@@ -44,12 +44,25 @@ export class SyncEmailModal extends Modal {
 			cls: "taskrobin-card-info-row",
 		});
 		setIcon(originEmailInfo, "mail");
-		originEmailInfo.appendText(" From: ");
+		originEmailInfo.appendText(" Send emails from: ");
 		const originEmailSpan = originEmailInfo.createEl("span", {
 			cls: "mono-text-span",
 		});
 		originEmailSpan.setText(
 			integration.originEmail || this.plugin.settings.emailAddress
+		);
+
+		// Show the forwarding address email for this integration
+		const forwardingEmailInfo = cardContent.createEl("div", {
+			cls: "taskrobin-card-info-row",
+		});
+		setIcon(forwardingEmailInfo, "mail");
+		forwardingEmailInfo.appendText(" To forwarding address: ");
+		const forwardingEmailSpan = forwardingEmailInfo.createEl("span", {
+			cls: "mono-text-span",
+		});
+		forwardingEmailSpan.setText(
+			integration.forwardingEmailAlias + "@taskrobin.io"
 		);
 
 		// Directory info

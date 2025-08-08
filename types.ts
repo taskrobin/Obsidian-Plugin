@@ -2,7 +2,16 @@ export interface Integration {
 	forwardingEmailAlias: string;
 	rootDirectory: string;
 	originEmail: string;
+	obsidianEmailFolderStructure?: EmailFolderStructure;
 }
+
+export const EmailFolderStructure = {
+	FolderPerEmail: "folder_per_email",
+	FlatAttachmentInFolder: "flat_attachments_in_folder",
+} as const;
+
+export type EmailFolderStructure =
+	(typeof EmailFolderStructure)[keyof typeof EmailFolderStructure];
 
 export interface EmailAuth {
 	originEmail: string;

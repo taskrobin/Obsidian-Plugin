@@ -2,7 +2,7 @@ import { App, Modal, Notice } from "obsidian";
 import { createIntegration } from "../api";
 import TaskRobinPlugin from "../main";
 import { setAccessTokenForEmail } from "../syncService";
-import { Integration } from "../types";
+import { EmailFolderStructure, Integration } from "../types";
 import { isTaskRobinEmail, isValidEmail } from "../utils";
 import { SyncEmailModal } from "./SyncEmailModal";
 
@@ -11,6 +11,8 @@ export class SetupIntegrationModal extends Modal {
 	private sourceEmail = "";
 	private forwardingEmailAlias = "";
 	private rootDirectory = "";
+	private folderStructure: EmailFolderStructure =
+		EmailFolderStructure.FolderPerEmail; // Default value
 	private isSubmitting = false;
 
 	constructor(app: App, plugin: TaskRobinPlugin) {
@@ -55,6 +57,7 @@ export class SetupIntegrationModal extends Modal {
 					forwardingEmailAlias: forwardingEmailAlias,
 					rootDirectory: rootDirectory,
 					originEmail: originEmail,
+					obsidianEmailFolderStructure: this.folderStructure,
 				};
 
 				// Add the new integration to the array
@@ -205,6 +208,40 @@ export class SetupIntegrationModal extends Modal {
 		directoryContainer.createEl("div", {
 			cls: "taskrobin-help-text",
 			text: "Folder will be created if it doesn't exist",
+		});
+
+		// Add folder structure dropdown
+		const folderStructureContainer = inputsContainer.createEl("div", {
+			cls: "taskrobin-input-group",
+		});
+		folderStructureContainer.createEl("label", {
+			text: "Email folder structure:",
+		});
+		const folderStructureSelect =
+			folderStructureContainer.createEl("select");
+		const folderPerEmailOption = folderStructureSelect.createEl("option", {
+			text: "Create a sub-folder per email (default)",
+			value: EmailFolderStructure.FolderPerEmail,
+		});
+		folderStructureSelect.createEl("option", {
+			text: "Email markdown files in the base email folder, attachments in sub-folders per email",
+			value: EmailFolderStructure.FlatAttachmentInFolder,
+		});
+		folderPerEmailOption.selected = true;
+		folderStructureContainer.createEl("div", {
+			cls: "taskrobin-help-text",
+			text: "Choose how emails and attachments are organized in your vault",
+		});
+
+		// Add event listener for the folder structure select
+		folderStructureSelect.addEventListener("change", (e) => {
+			const value = (e.target as HTMLSelectElement).value;
+			if (value === EmailFolderStructure.FolderPerEmail) {
+				this.folderStructure = EmailFolderStructure.FolderPerEmail;
+			} else if (value === EmailFolderStructure.FlatAttachmentInFolder) {
+				this.folderStructure =
+					EmailFolderStructure.FlatAttachmentInFolder;
+			}
 		});
 
 		// Help text
