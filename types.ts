@@ -20,20 +20,18 @@ export interface EmailAuth {
 
 export interface TaskRobinPluginSettings {
 	hasWelcomedUser: boolean;
-	accessToken: string; // Legacy field, kept for backward compatibility
 	rootDirectory: string;
 	downloadAttachments: boolean;
 	syncOnLaunch: boolean;
 
-	// Legacy fields for backward compatibility
-	emailAddress: string;
-	forwardingEmailAlias: string;
-
-	// New fields for multiple integrations
+	// Fields for multiple integrations
 	integrations: Integration[];
 
-	// New field for email authentication
+	// Field for email authentication
 	emailAuths: EmailAuth[];
+
+	// Optional default email for convenience when creating new integrations
+	defaultEmailAddress?: string;
 }
 
 export interface SyncResponse {

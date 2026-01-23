@@ -9,6 +9,7 @@ Seamlessly sync your emails and attachments to your Obsidian vault with TaskRobi
 -   📁 Customizable storage directory
 -   🔒 Secure email forwarding setup
 -   🔄 On-demand sync functionality
+-   📥 Integrate with multiple email inboxes
 
 ## Installation
 
@@ -36,35 +37,49 @@ Seamlessly sync your emails and attachments to your Obsidian vault with TaskRobi
 
 ### Manual Sync
 
-1. Click the TaskRobin icon in the Obsidian ribbon
-2. Click "Sync Emails" to manually trigger synchronization
+1. Click the TaskRobin icon in the Obsidian left side vertical panel
+2. Click "Sync now" for each integration to manually trigger synchronization
 3. New emails will be saved as markdown files in your designated folder, together with attachment files
 
 ### File Structure
 
-Emails are saved with the following structure:
+Emails are saved with the following structure by default, a sub-folder will be created for each email message:
 
 ```
 Your-Vault/
 └── Emails/ # Default directory (configurable)
-├── YYYY-MM-DD-{email subject line}/ # Date-based folders
-│ ├── email.md # Email content
-│ ├── attachment1.pdf # Email attachments
-│ └── attachment2.html # Email attachments
+│ ├── YYYY-MM-DD-{email subject line}/ # Date-based folders
+│ │ ├── email.md # Email content
+│ │ ├── attachment1.pdf # Email attachments
+│ │ └── attachment2.html # Email attachments
+└── ...
+```
+
+Alternatively, you can also use a flat structure where all email markdown files are stored at the base directory, attachments are saved in sub-folders:
+
+```
+Your-Vault/
+└── Emails/ # Default directory (configurable)
+│ ├── attachments/
+│ │ ├── YYYY-MM-DD-{email subject line} attachments/ # Date-based folders
+│ │ │ ├── attachment1.pdf # Email attachments
+│ │ │ ├── attachment2.html # Email attachments
+│ ├── YYYY-MM-DD-{email subject line}.md # Email content
 └── ...
 ```
 
 ## Configuration
 
-| Setting              | Description                       | Default  |
-| -------------------- | --------------------------------- | -------- |
-| Email Address        | Your source email address         | -        |
-| Forwarding Alias     | Your TaskRobin forwarding address | -        |
-| Root Directory       | Where emails are saved            | "Emails" |
-| Download Attachments | Whether to save attachments       | true     |
+| Setting               | Description                       | Default  |
+| --------------------- | --------------------------------- | -------- |
+| Email Address         | Your own email address            | -        |
+| Forwarding Address    | Your TaskRobin forwarding address | -        |
+| Vault Email Directory | Where emails are saved            | "Emails" |
+| Download Attachments  | Whether to save attachments       | true     |
 
 ## Security
 
+-   All files and communications are encrypted
 -   All email processing happens through secure TaskRobin servers
 -   No email credentials are stored in the plugin
 -   All API communications use HTTPS
@@ -78,8 +93,8 @@ Your-Vault/
 ## Support
 
 -   Visit [TaskRobin.io](https://www.taskrobin.io) for documentation
--   Report issues on our [GitHub repository](https://github.com/username/taskrobin-obsidian)
 -   [Live chat support](https://app.taskrobin.io)
+-   Report issues on our [GitHub repository](https://github.com/taskrobin/Obsidian-Plugin)
 
 ## Contributing
 

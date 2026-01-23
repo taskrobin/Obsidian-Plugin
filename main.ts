@@ -5,17 +5,15 @@ import { SetupIntegrationModal } from "./modals/SetupIntegrationModal";
 import { SyncEmailModal } from "./modals/SyncEmailModal";
 import { SettingTab } from "./SettingTab";
 import { performEmailSync } from "./syncService";
-import { Integration, TaskRobinPluginSettings } from "./types";
+import { TaskRobinPluginSettings } from "./types";
 
 export default class TaskRobinPlugin extends Plugin {
 	settings: TaskRobinPluginSettings;
 
 	async showAppropriateModal() {
 		if (
-			(!this.settings.accessToken &&
-				this.settings.emailAuths.length === 0) ||
-			(this.settings.integrations.length === 0 &&
-				!this.settings.emailAddress)
+			this.settings.emailAuths.length === 0 ||
+			this.settings.integrations.length === 0
 		) {
 			new SetupIntegrationModal(this.app, this).open();
 		} else {
@@ -23,71 +21,8 @@ export default class TaskRobinPlugin extends Plugin {
 		}
 	}
 
-	/**
-	 * Migrate legacy settings to the new format with multiple integrations
-	 */
-	private migrateSettings() {
-		let needsSave = false;
-
-		// If we have legacy settings but no integrations, migrate them
-		if (
-			this.settings.emailAddress &&
-			this.settings.forwardingEmailAlias &&
-			this.settings.integrations.length === 0
-		) {
-			this.settings.integrations.push({
-				forwardingEmailAlias: this.settings.forwardingEmailAlias,
-				rootDirectory: this.settings.rootDirectory,
-				originEmail: this.settings.emailAddress,
-			});
-			console.log("Migrated legacy integration to new format");
-			needsSave = true;
-		}
-
-		// Add originEmail field to existing integrations if missing
-		for (const integration of this.settings.integrations) {
-			if (!("originEmail" in integration)) {
-				(integration as Integration).originEmail =
-					this.settings.emailAddress;
-				needsSave = true;
-			}
-		}
-
-		// Initialize emailAuths array if it doesn't exist
-		if (!this.settings.emailAuths) {
-			this.settings.emailAuths = [];
-			needsSave = true;
-		}
-
-		// Migrate the legacy access token to emailAuths
-		// Since we're migrating from a system with a single access token,
-		// we only need to create one EmailAuth entry for the legacy email address
-		if (
-			this.settings.emailAddress &&
-			this.settings.accessToken &&
-			this.settings.emailAuths.length === 0
-		) {
-			this.settings.emailAuths.push({
-				originEmail: this.settings.emailAddress,
-				accessToken: this.settings.accessToken,
-			});
-			console.log(
-				`Created EmailAuth entry for ${this.settings.emailAddress}`
-			);
-			needsSave = true;
-		}
-
-		if (needsSave) {
-			console.log("Migration completed, saving settings");
-			this.saveSettings();
-		}
-	}
-
 	async onload() {
 		await this.loadSettings();
-
-		// Migrate legacy settings to new format if needed
-		this.migrateSettings();
 
 		if (!this.settings.hasWelcomedUser) {
 			// User onboarding
@@ -103,7 +38,7 @@ export default class TaskRobinPlugin extends Plugin {
 			"TaskRobin",
 			(evt: MouseEvent) => {
 				this.showAppropriateModal();
-			}
+			},
 		);
 		// Perform additional things with the ribbon
 		ribbonIconEl.addClass("my-plugin-ribbon-class");
@@ -129,28 +64,19 @@ export default class TaskRobinPlugin extends Plugin {
 			name: "Sync emails now",
 			callback: async () => {
 				if (
-					(!this.settings.accessToken &&
-						this.settings.emailAuths.length === 0) ||
-					(this.settings.integrations.length === 0 &&
-						!this.settings.emailAddress)
+					this.settings.emailAuths.length === 0 ||
+					this.settings.integrations.length === 0
 				) {
 					new SetupIntegrationModal(this.app, this).open();
 					return;
 				}
 				try {
-					// If we have integrations, sync all of them
-					if (this.settings.integrations.length > 0) {
-						for (const integration of this.settings.integrations) {
-							await performEmailSync(
-								this.app,
-								this.settings,
-								integration
-							);
-						}
-					}
-					// Legacy support
-					else if (this.settings.emailAddress) {
-						await performEmailSync(this.app, this.settings);
+					for (const integration of this.settings.integrations) {
+						await performEmailSync(
+							this.app,
+							this.settings,
+							integration,
+						);
 					}
 				} catch (error) {
 					console.error("Command sync failed:", error);
@@ -162,33 +88,18 @@ export default class TaskRobinPlugin extends Plugin {
 		this.addSettingTab(new SettingTab(this.app, this));
 
 		// Sync on launch if enabled
-		if (
-			this.settings.syncOnLaunch &&
-			(this.settings.accessToken || this.settings.emailAuths.length > 0)
-		) {
+		if (this.settings.syncOnLaunch && this.settings.emailAuths.length > 0) {
 			setTimeout(() => {
-				// If we have integrations, sync all of them
-				if (this.settings.integrations.length > 0) {
-					for (const integration of this.settings.integrations) {
-						performEmailSync(
-							this.app,
-							this.settings,
-							integration
-						).catch((error) => {
-							const emailToUse =
-								integration.originEmail ||
-								this.settings.emailAddress;
-							console.error(
-								`Launch sync failed for ${emailToUse} (${integration.forwardingEmailAlias}):`,
-								error
-							);
-						});
-					}
-				}
-				// Legacy support
-				else if (this.settings.emailAddress) {
-					performEmailSync(this.app, this.settings).catch((error) => {
-						console.error("Launch sync failed:", error);
+				for (const integration of this.settings.integrations) {
+					performEmailSync(
+						this.app,
+						this.settings,
+						integration,
+					).catch((error) => {
+						console.error(
+							`Launch sync failed for ${integration.originEmail} (${integration.forwardingEmailAlias}):`,
+							error,
+						);
 					});
 				}
 			}, 2000);
@@ -201,7 +112,7 @@ export default class TaskRobinPlugin extends Plugin {
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			await this.loadData()
+			await this.loadData(),
 		);
 	}
 

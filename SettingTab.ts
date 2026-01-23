@@ -18,7 +18,7 @@ export class SettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Welcome information")
 			.setDesc(
-				"Show me basic information about this plugin and how to make the best out of Sync Email by TaskRobin."
+				"Show me basic information about this plugin and how to make the best out of Sync Email by TaskRobin.",
 			)
 			.addButton((button) =>
 				button
@@ -26,22 +26,20 @@ export class SettingTab extends PluginSettingTab {
 					.setCta()
 					.onClick(() => {
 						new FirstTimeWelcomeModal(this.app, this.plugin).open();
-					})
+					}),
 			);
 
 		// Check if the required settings are empty
 		if (
-			(!this.plugin.settings.emailAddress &&
-				this.plugin.settings.emailAuths.length === 0) ||
-			(!this.plugin.settings.accessToken &&
-				this.plugin.settings.emailAuths.length === 0) ||
+			this.plugin.settings.emailAuths.length === 0 ||
+			this.plugin.settings.integrations.length === 0 ||
 			!this.plugin.settings.rootDirectory
 		) {
 			// Display setup button when required settings are missing
 			new Setting(containerEl)
 				.setName("TaskRobin setup")
 				.setDesc(
-					"Complete the setup process to start syncing emails to your Obsidian vault. TaskRobin helps you sync your emails to Obsidian through email forwarding. Complete the setup to get started."
+					"Complete the setup process to start syncing emails to your Obsidian vault. TaskRobin helps you sync your emails to Obsidian through email forwarding. Complete the setup to get started.",
 				)
 				.addButton((button) =>
 					button
@@ -50,33 +48,33 @@ export class SettingTab extends PluginSettingTab {
 						.onClick(() => {
 							new SetupIntegrationModal(
 								this.app,
-								this.plugin
+								this.plugin,
 							).open();
-						})
+						}),
 				);
 
 			return;
 		}
 
 		new Setting(containerEl)
-			.setName("Default email inbox address")
+			.setName("Default email address for new integrations")
 			.setDesc(
-				"The default email address for new integrations. You can change the origin email address when you create new integrations."
+				"This email address will be pre-filled when creating new integrations. You can change it for each integration.",
 			)
 			.addText((text) =>
 				text
-					.setPlaceholder("Enter your email inbox address")
-					.setValue(this.plugin.settings.emailAddress)
+					.setPlaceholder("your.email@example.com")
+					.setValue(this.plugin.settings.defaultEmailAddress || "")
 					.onChange(async (value) => {
-						this.plugin.settings.emailAddress = value;
+						this.plugin.settings.defaultEmailAddress = value.trim();
 						await this.plugin.saveSettings();
-					})
+					}),
 			);
 
 		new Setting(containerEl)
 			.setName("Default Vault email folder")
 			.setDesc(
-				"The default folder where email content will be saved for new integrations. You can change the email destination folder when you create new integrations."
+				"The default folder where email content will be saved for new integrations. You can change the email destination folder when you create new integrations.",
 			)
 			.addText((text) =>
 				text
@@ -89,7 +87,7 @@ export class SettingTab extends PluginSettingTab {
 						}
 						this.plugin.settings.rootDirectory = value;
 						await this.plugin.saveSettings();
-					})
+					}),
 			)
 			.addButton((button) =>
 				button.setButtonText("Create directory").onClick(async () => {
@@ -97,30 +95,30 @@ export class SettingTab extends PluginSettingTab {
 						const folderPath = this.plugin.settings.rootDirectory;
 						const folderExists =
 							(await this.app.vault.getAbstractFileByPath(
-								folderPath
+								folderPath,
 							)) !== null;
 						if (!folderExists) {
 							await this.app.vault.createFolder(folderPath);
 							new Notice(`Created directory: ${folderPath}`);
 						} else {
 							new Notice(
-								`Directory already exists: ${folderPath}`
+								`Directory already exists: ${folderPath}`,
 							);
 						}
 					} catch (error) {
 						console.error("Error creating directory:", error);
 						new Notice(
-							"Error creating directory. Check console for details."
+							"Error creating directory. Check console for details.",
 						);
 					}
-				})
+				}),
 			);
 
 		// Add new toggle for attachments
 		new Setting(containerEl)
 			.setName("Download attachments")
 			.setDesc(
-				"When enabled, email attachments will be downloaded and saved in the vault"
+				"When enabled, email attachments will be downloaded and saved in the vault",
 			)
 			.addToggle((toggle) =>
 				toggle
@@ -128,14 +126,14 @@ export class SettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.downloadAttachments = value;
 						await this.plugin.saveSettings();
-					})
+					}),
 			);
 
 		// Add sync on launch toggle
 		new Setting(containerEl)
 			.setName("Sync emails on Obsidian launch")
 			.setDesc(
-				"When enabled, emails will be automatically synced when Obsidian starts"
+				"When enabled, emails will be automatically synced when Obsidian starts",
 			)
 			.addToggle((toggle) =>
 				toggle
@@ -143,7 +141,7 @@ export class SettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.syncOnLaunch = value;
 						await this.plugin.saveSettings();
-					})
+					}),
 			);
 
 		// Email Authentication Section
@@ -185,10 +183,10 @@ export class SettingTab extends PluginSettingTab {
 				const tokenDisplay = auth.accessToken
 					? `${auth.accessToken.substring(
 							0,
-							5
-					  )}...${auth.accessToken.substring(
-							auth.accessToken.length - 5
-					  )}`
+							5,
+						)}...${auth.accessToken.substring(
+							auth.accessToken.length - 5,
+						)}`
 					: "No token";
 
 				authItem.createEl("div", {
@@ -196,24 +194,6 @@ export class SettingTab extends PluginSettingTab {
 					cls: "taskrobin-auth-token",
 				});
 			}
-		} else {
-			// Legacy access token display
-			new Setting(containerEl)
-				.setName("Access token (Legacy)")
-				.setDesc(
-					"Your TaskRobin integration access token. Complete the setup process to obtain this key. DO NOT SHARE THIS."
-				)
-				.addText((text) =>
-					text
-						.setPlaceholder(
-							"Enter your TaskRobin integration access token"
-						)
-						.setValue(this.plugin.settings.accessToken)
-						.onChange(async (value) => {
-							this.plugin.settings.accessToken = value;
-							await this.plugin.saveSettings();
-						})
-				);
 		}
 	}
 }

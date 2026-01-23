@@ -11,19 +11,19 @@ import { formatEmailFolderName, sanitizeFileName } from "./utils";
  * Get the access token for a specific origin email
  * @param settings The plugin settings
  * @param originEmail The origin email to get the access token for
- * @returns The access token for the origin email, or the legacy access token if not found
+ * @returns The access token for the origin email, or empty string if not found
  */
 export function getAccessTokenForEmail(
 	settings: TaskRobinPluginSettings,
-	originEmail: string
+	originEmail: string,
 ): string {
 	// Look for a matching EmailAuth entry
 	const auth = settings.emailAuths.find(
-		(auth) => auth.originEmail === originEmail
+		(auth) => auth.originEmail === originEmail,
 	);
 
-	// Return the token if found, otherwise fall back to the legacy token
-	return auth?.accessToken || settings.accessToken;
+	// Return the token if found, otherwise return empty string
+	return auth?.accessToken || "";
 }
 
 /**
@@ -37,11 +37,11 @@ export async function setAccessTokenForEmail(
 	settings: TaskRobinPluginSettings,
 	originEmail: string,
 	accessToken: string,
-	saveSettings: () => Promise<void>
+	saveSettings: () => Promise<void>,
 ): Promise<void> {
 	// Look for a matching EmailAuth entry
 	let auth = settings.emailAuths.find(
-		(auth) => auth.originEmail === originEmail
+		(auth) => auth.originEmail === originEmail,
 	);
 
 	if (auth) {
@@ -62,20 +62,17 @@ export async function setAccessTokenForEmail(
 export async function performEmailSync(
 	app: App,
 	settings: TaskRobinPluginSettings,
-	integration?: Integration
+	integration: Integration,
 ): Promise<void> {
 	try {
-		// Use the integration-specific originEmail and rootDirectory if provided
-		// Otherwise fall back to the global emailAddress and rootDirectory
-		const emailAddress = integration?.originEmail || settings.emailAddress;
-		const rootDirectory = integration
-			? integration.rootDirectory
-			: settings.rootDirectory;
+		// Use the integration-specific settings
+		const emailAddress = integration.originEmail;
+		const rootDirectory = integration.rootDirectory;
 
 		// Get the folder structure option from the integration settings
 		// Default to FolderPerEmail if not specified
 		const folderStructure =
-			integration?.obsidianEmailFolderStructure ||
+			integration.obsidianEmailFolderStructure ||
 			EmailFolderStructure.FolderPerEmail;
 
 		// Ensure the root directory exists, create it if it doesn't
@@ -91,7 +88,7 @@ export async function performEmailSync(
 		const data = await syncEmails(
 			emailAddress,
 			accessToken,
-			integration?.forwardingEmailAlias
+			integration.forwardingEmailAlias,
 		);
 
 		for (const emailGroup of data.emails) {
@@ -116,7 +113,7 @@ export async function performEmailSync(
 					const emailFolderPath = `${rootDirectory}/${folderName}`;
 					const folderExists =
 						(await app.vault.getAbstractFileByPath(
-							emailFolderPath
+							emailFolderPath,
 						)) !== null;
 					if (!folderExists) {
 						await app.vault.createFolder(emailFolderPath);
@@ -145,7 +142,7 @@ export async function performEmailSync(
 								const finalFilePath = `${emailFolderPath}/${finalFileName}`;
 								const finalFilePathExists =
 									(await app.vault.getAbstractFileByPath(
-										finalFilePath
+										finalFilePath,
 									)) !== null;
 
 								if (!finalFilePathExists) {
@@ -155,26 +152,26 @@ export async function performEmailSync(
 									});
 									if (!fileResponse.ok) {
 										throw new Error(
-											`Failed to download ${fileName}: ${fileResponse.status} ${fileResponse.statusText}`
+											`Failed to download ${fileName}: ${fileResponse.status} ${fileResponse.statusText}`,
 										);
 									}
 									const fileData =
 										await fileResponse.arrayBuffer();
 									await app.vault.createBinary(
 										finalFilePath,
-										fileData
+										fileData,
 									);
 								}
 							} catch (error) {
 								console.error(
 									`Error downloading file ${fileName}:`,
-									error
+									error,
 								);
 								new Notice(
-									`Failed to download file: ${fileName}`
+									`Failed to download file: ${fileName}`,
 								);
 							}
-						}
+						},
 					);
 
 					await Promise.all(downloadPromises);
@@ -199,7 +196,7 @@ export async function performEmailSync(
 									const finalFilePath = `${rootDirectory}/${folderName}.md`;
 									const finalFilePathExists =
 										(await app.vault.getAbstractFileByPath(
-											finalFilePath
+											finalFilePath,
 										)) !== null;
 
 									if (!finalFilePathExists) {
@@ -208,18 +205,18 @@ export async function performEmailSync(
 											{
 												mode: "cors",
 												credentials: "omit",
-											}
+											},
 										);
 										if (!fileResponse.ok) {
 											throw new Error(
-												`Failed to download ${fileName}: ${fileResponse.status} ${fileResponse.statusText}`
+												`Failed to download ${fileName}: ${fileResponse.status} ${fileResponse.statusText}`,
 											);
 										}
 										const fileData =
 											await fileResponse.arrayBuffer();
 										await app.vault.createBinary(
 											finalFilePath,
-											fileData
+											fileData,
 										);
 									}
 								} else {
@@ -234,11 +231,11 @@ export async function performEmailSync(
 									const rootAttachmentsPath = `${rootDirectory}/attachments`;
 									const rootAttachmentsFolderExists =
 										(await app.vault.getAbstractFileByPath(
-											rootAttachmentsPath
+											rootAttachmentsPath,
 										)) !== null;
 									if (!rootAttachmentsFolderExists) {
 										await app.vault.createFolder(
-											rootAttachmentsPath
+											rootAttachmentsPath,
 										);
 									}
 
@@ -249,11 +246,11 @@ export async function performEmailSync(
 									// Check if the email's attachment folder exists, create it if it doesn't
 									const folderExists =
 										(await app.vault.getAbstractFileByPath(
-											attachmentFolderPath
+											attachmentFolderPath,
 										)) !== null;
 									if (!folderExists) {
 										await app.vault.createFolder(
-											attachmentFolderPath
+											attachmentFolderPath,
 										);
 									}
 
@@ -261,7 +258,7 @@ export async function performEmailSync(
 									const finalFilePath = `${attachmentFolderPath}/${finalFileName}`;
 									const finalFilePathExists =
 										(await app.vault.getAbstractFileByPath(
-											finalFilePath
+											finalFilePath,
 										)) !== null;
 
 									if (!finalFilePathExists) {
@@ -270,31 +267,31 @@ export async function performEmailSync(
 											{
 												mode: "cors",
 												credentials: "omit",
-											}
+											},
 										);
 										if (!fileResponse.ok) {
 											throw new Error(
-												`Failed to download ${fileName}: ${fileResponse.status} ${fileResponse.statusText}`
+												`Failed to download ${fileName}: ${fileResponse.status} ${fileResponse.statusText}`,
 											);
 										}
 										const fileData =
 											await fileResponse.arrayBuffer();
 										await app.vault.createBinary(
 											finalFilePath,
-											fileData
+											fileData,
 										);
 									}
 								}
 							} catch (error) {
 								console.error(
 									`Error downloading file ${fileName}:`,
-									error
+									error,
 								);
 								new Notice(
-									`Failed to download file: ${fileName}`
+									`Failed to download file: ${fileName}`,
 								);
 							}
-						}
+						},
 					);
 
 					await Promise.all(downloadPromises);

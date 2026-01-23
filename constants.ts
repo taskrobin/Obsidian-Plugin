@@ -5,12 +5,10 @@ export const OBSIDIAN_API =
 
 export const DEFAULT_SETTINGS: TaskRobinPluginSettings = {
 	hasWelcomedUser: false,
-	emailAddress: "",
-	accessToken: "",
 	rootDirectory: "Emails",
 	downloadAttachments: true,
-	forwardingEmailAlias: "",
 	syncOnLaunch: false,
 	integrations: [],
 	emailAuths: [],
+	defaultEmailAddress: "",
 };

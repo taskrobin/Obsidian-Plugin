@@ -19,17 +19,19 @@ export class SetupIntegrationModal extends Modal {
 		super(app);
 		this.plugin = plugin;
 		this.rootDirectory = this.plugin.settings.rootDirectory;
+		// Pre-fill with default email if available
+		this.sourceEmail = this.plugin.settings.defaultEmailAddress || "";
 	}
 
 	async handleIntegrationCreation(
 		originEmail: string,
 		forwardingEmailAlias: string,
-		rootDirectory: string
+		rootDirectory: string,
 	) {
 		if (this.isSubmitting) return;
 
 		const submitButton = this.contentEl.querySelector(
-			".taskrobin-submit"
+			".taskrobin-submit",
 		) as HTMLButtonElement;
 		if (submitButton) {
 			submitButton.disabled = true;
@@ -40,7 +42,7 @@ export class SetupIntegrationModal extends Modal {
 		try {
 			const payload = await createIntegration(
 				originEmail,
-				forwardingEmailAlias
+				forwardingEmailAlias,
 			);
 
 			if (payload.status === "success") {
@@ -49,7 +51,7 @@ export class SetupIntegrationModal extends Modal {
 					this.plugin.settings,
 					originEmail,
 					payload.accessToken,
-					() => this.plugin.saveSettings()
+					() => this.plugin.saveSettings(),
 				);
 
 				// Create a new integration object
@@ -63,13 +65,12 @@ export class SetupIntegrationModal extends Modal {
 				// Add the new integration to the array
 				this.plugin.settings.integrations.push(newIntegration);
 
-				// For backward compatibility, also set the legacy fields
-				// Only set these if this is the first integration
-				if (this.plugin.settings.integrations.length === 1) {
-					this.plugin.settings.accessToken = payload.accessToken;
-					this.plugin.settings.emailAddress = originEmail;
-					this.plugin.settings.forwardingEmailAlias =
-						forwardingEmailAlias;
+				// If this is the first integration and no default email is set, save this email as default
+				if (
+					this.plugin.settings.integrations.length === 1 &&
+					!this.plugin.settings.defaultEmailAddress
+				) {
+					this.plugin.settings.defaultEmailAddress = originEmail;
 				}
 
 				await this.plugin.saveSettings();
@@ -86,7 +87,7 @@ export class SetupIntegrationModal extends Modal {
 		} catch (error) {
 			console.error("Failed to create integration:", error);
 			new Notice(
-				"Failed to create integration. Please check your network connection and try again."
+				"Failed to create integration. Please check your network connection and try again.",
 			);
 		} finally {
 			this.isSubmitting = false;
@@ -137,34 +138,23 @@ export class SetupIntegrationModal extends Modal {
 			text: "Email address to sync emails from:",
 		});
 
-		// If we already have an email address set up, show it as disabled
-		const hasExistingEmail =
-			this.plugin.settings.emailAddress &&
-			this.plugin.settings.integrations.length > 0;
 		const sourceEmailInput = sourceEmailContainer.createEl("input", {
 			type: "email",
 			placeholder: "your.email@example.com",
-			value: hasExistingEmail
-				? this.plugin.settings.emailAddress
-				: this.sourceEmail,
+			value: this.sourceEmail,
 		});
 
-		// Allow users to use different email addresses for different integrations
-		if (hasExistingEmail) {
-			sourceEmailContainer.createEl("div", {
-				cls: "taskrobin-help-text",
-				text: "You can use a different email address for this integration",
-			});
-			// Set the source email to the existing one as a default
-			this.sourceEmail = this.plugin.settings.emailAddress;
-		}
+		sourceEmailContainer.createEl("div", {
+			cls: "taskrobin-help-text",
+			text: "You can use different email addresses for different integrations",
+		});
 
 		const sourceEmailError = sourceEmailContainer.createEl("div", {
 			cls: "taskrobin-error-message",
 		});
 		sourceEmailError.setAttr(
 			"style",
-			"color: red; display: none; font-size: 12px; margin-top: 4px;"
+			"color: red; display: none; font-size: 12px; margin-top: 4px;",
 		);
 
 		// Forwarding address input
@@ -190,7 +180,7 @@ export class SetupIntegrationModal extends Modal {
 		});
 		forwardingEmailError.setAttr(
 			"style",
-			"color: red; display: none; font-size: 12px; margin-top: 4px;"
+			"color: red; display: none; font-size: 12px; margin-top: 4px;",
 		);
 
 		// Root directory input
@@ -295,7 +285,7 @@ export class SetupIntegrationModal extends Modal {
 				isValid = false;
 			} else if (!/^[a-zA-Z0-9-_]+$/.test(forwardingAlias)) {
 				forwardingEmailError.setText(
-					"Only letters, numbers, hyphens, and underscores are allowed"
+					"Only letters, numbers, hyphens, and underscores are allowed",
 				);
 				forwardingEmailError.classList.add("visible");
 				isValid = false;
@@ -376,7 +366,7 @@ export class SetupIntegrationModal extends Modal {
 
 		if (!/^[a-zA-Z0-9-_]+$/.test(this.forwardingEmailAlias)) {
 			new Notice(
-				"Forwarding alias can only contain letters, numbers, hyphens, and underscores"
+				"Forwarding alias can only contain letters, numbers, hyphens, and underscores",
 			);
 			return;
 		}
@@ -384,7 +374,7 @@ export class SetupIntegrationModal extends Modal {
 		await this.handleIntegrationCreation(
 			this.sourceEmail,
 			this.forwardingEmailAlias,
-			this.rootDirectory
+			this.rootDirectory,
 		);
 	}
 
