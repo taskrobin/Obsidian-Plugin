@@ -3,10 +3,13 @@ import { deleteIntegration } from "../api";
 import TaskRobinPlugin from "../main";
 import { getAccessTokenForEmail, performEmailSync } from "../syncService";
 import { Integration } from "../types";
+import { EditDirectoryModal } from "./EditDirectoryModal";
 import { SetupIntegrationModal } from "./SetupIntegrationModal";
 
 export class SyncEmailModal extends Modal {
 	plugin: TaskRobinPlugin;
+	private syncAllCooldownActive: boolean = false;
+	private cooldownInterval: NodeJS.Timeout | null = null;
 
 	constructor(app: App, plugin: TaskRobinPlugin) {
 		super(app);
@@ -127,6 +130,19 @@ export class SyncEmailModal extends Modal {
 			}
 		});
 
+		// Add button to edit directory
+		const editDirButton = directoryInfo.createEl("button", {
+			cls: "clickable-icon",
+		});
+		editDirButton.setAttribute("aria-label", "Edit directory");
+		setIcon(editDirButton, "pencil");
+		editDirButton.addEventListener("click", () => {
+			new EditDirectoryModal(this.app, this.plugin, integration, () => {
+				// Refresh the modal after saving
+				this.onOpen();
+			}).open();
+		});
+
 		// Check if directory exists
 		try {
 			const folderExists = this.app.vault.getAbstractFileByPath(
@@ -238,6 +254,135 @@ export class SyncEmailModal extends Modal {
 			text: "Send emails from your email inbox to the TaskRobin forwarding addresses below, then sync these emails to the respective Obsidian vault folders.",
 		});
 
+		// Sync on launch toggle
+		const syncOnLaunchContainer = contentEl.createEl("div", {
+			cls: "taskrobin-sync-on-launch-container",
+		});
+
+		const toggleWrapper = syncOnLaunchContainer.createEl("div", {
+			cls: "taskrobin-toggle-wrapper",
+		});
+
+		const toggleLabel = toggleWrapper.createEl("label", {
+			cls: "taskrobin-toggle-label",
+		});
+
+		const checkbox = toggleLabel.createEl("input", {
+			type: "checkbox",
+			cls: "taskrobin-toggle-checkbox",
+		});
+		checkbox.checked = this.plugin.settings.syncOnLaunch;
+
+		const toggleText = toggleLabel.createEl("span", {
+			text: "Sync emails on Obsidian launch",
+			cls: "taskrobin-toggle-text",
+		});
+
+		// Add event listener for the toggle
+		checkbox.addEventListener("change", async () => {
+			this.plugin.settings.syncOnLaunch = checkbox.checked;
+			await this.plugin.saveSettings();
+			new Notice(
+				`Sync on launch ${checkbox.checked ? "enabled" : "disabled"}`,
+			);
+		});
+
+		// Add "Sync All" button if there are multiple integrations
+		if (this.plugin.settings.integrations.length > 1) {
+			const syncAllContainer = contentEl.createEl("div", {
+				cls: "taskrobin-sync-all-container",
+			});
+
+			const syncAllButton = syncAllContainer.createEl("button", {
+				text: "Sync All Integrations",
+				cls: "mod-cta taskrobin-sync-all-button",
+			});
+
+			// Handle sync all button click
+			syncAllButton.addEventListener("click", async () => {
+				if (this.syncAllCooldownActive) {
+					return;
+				}
+
+				try {
+					// Disable button and start cooldown
+					this.syncAllCooldownActive = true;
+					syncAllButton.disabled = true;
+
+					const integrationCount = this.plugin.settings.integrations.length;
+					new Notice(`Syncing ${integrationCount} integrations in parallel...`);
+
+					// Sync all integrations in parallel
+					const syncPromises = this.plugin.settings.integrations.map(
+						(integration) =>
+							performEmailSync(
+								this.app,
+								this.plugin.settings,
+								integration,
+							).then(() => ({
+								success: true,
+								integration,
+							})).catch((error) => ({
+								success: false,
+								integration,
+								error,
+							}))
+					);
+
+					const results = await Promise.all(syncPromises);
+
+					// Show results
+					const successCount = results.filter(r => r.success).length;
+					const failureCount = results.length - successCount;
+
+					if (failureCount === 0) {
+						new Notice(`✓ All ${integrationCount} integrations synced successfully!`);
+					} else {
+						new Notice(`Sync completed: ${successCount} succeeded, ${failureCount} failed. Check console for details.`);
+						results.forEach(result => {
+							if (!result.success && 'error' in result) {
+								console.error(`Sync failed for ${result.integration.originEmail} (${result.integration.forwardingEmailAlias}):`, result.error);
+							}
+						});
+					}
+
+					// Start 10-second cooldown with countdown
+					let countdown = 10;
+					syncAllButton.setText(`Please wait... (${countdown}s)`);
+
+					this.cooldownInterval = setInterval(() => {
+						countdown--;
+						if (countdown > 0) {
+							syncAllButton.setText(`Please wait... (${countdown}s)`);
+						} else {
+							// Cooldown finished
+							if (this.cooldownInterval) {
+								clearInterval(this.cooldownInterval);
+								this.cooldownInterval = null;
+							}
+							this.syncAllCooldownActive = false;
+							syncAllButton.disabled = false;
+							syncAllButton.setText("Sync All Integrations");
+						}
+					}, 1000);
+
+				} catch (error) {
+					console.error("Sync all error:", error);
+					new Notice("Failed to sync all integrations. Check console for details.");
+
+					// Reset button state on error
+					this.syncAllCooldownActive = false;
+					syncAllButton.disabled = false;
+					syncAllButton.setText("Sync All Integrations");
+
+					if (this.cooldownInterval) {
+						clearInterval(this.cooldownInterval);
+						this.cooldownInterval = null;
+					}
+				}
+			});
+		}
+
 		// Container for integration cards
 		const integrationsContainer = contentEl.createEl("div", {
 			cls: "taskrobin-integrations-container",
@@ -292,5 +437,12 @@ export class SyncEmailModal extends Modal {
 	onClose() {
 		const { contentEl } = this;
 		contentEl.empty();
+
+		// Clean up cooldown interval if active
+		if (this.cooldownInterval) {
+			clearInterval(this.cooldownInterval);
+			this.cooldownInterval = null;
+		}
+		this.syncAllCooldownActive = false;
 	}
 }

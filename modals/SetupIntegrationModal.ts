@@ -3,7 +3,11 @@ import { createIntegration } from "../api";
 import TaskRobinPlugin from "../main";
 import { setAccessTokenForEmail } from "../syncService";
 import { EmailFolderStructure, Integration } from "../types";
-import { isTaskRobinEmail, isValidEmail } from "../utils";
+import {
+	isTaskRobinEmail,
+	isValidEmail,
+	validateDirectoryPath,
+} from "../utils";
 import { SyncEmailModal } from "./SyncEmailModal";
 
 export class SetupIntegrationModal extends Modal {
@@ -195,6 +199,14 @@ export class SetupIntegrationModal extends Modal {
 			placeholder: "Emails",
 			value: this.rootDirectory,
 		});
+		const directoryError = directoryContainer.createEl("div", {
+			cls: "taskrobin-error-message",
+		});
+		directoryError.setAttr(
+			"style",
+			"color: red; display: none; font-size: 12px; margin-top: 4px;",
+		);
+
 		directoryContainer.createEl("div", {
 			cls: "taskrobin-help-text",
 			text: "Folder will be created if it doesn't exist",
@@ -261,6 +273,7 @@ export class SetupIntegrationModal extends Modal {
 			let isValid = true;
 			const sourceEmail = sourceEmailInput.value.trim();
 			const forwardingAlias = forwardingInput.value.trim();
+			const directory = directoryInput.value.trim();
 
 			// Validate source email
 			if (!sourceEmail) {
@@ -293,11 +306,27 @@ export class SetupIntegrationModal extends Modal {
 				forwardingEmailError.classList.remove("visible");
 			}
 
+			// Validate directory path
+			if (!directory) {
+				directoryError.setText("Directory path is required");
+				directoryError.classList.add("visible");
+				isValid = false;
+			} else {
+				const validationResult = validateDirectoryPath(directory);
+				if (!validationResult.isValid) {
+					directoryError.setText(
+						validationResult.errorMessage ||
+							"Invalid directory path",
+					);
+					directoryError.classList.add("visible");
+					isValid = false;
+				} else {
+					directoryError.classList.remove("visible");
+				}
+			}
+
 			confirmButton.disabled =
-				!isValid ||
-				!sourceEmail ||
-				!forwardingAlias ||
-				!directoryInput.value;
+				!isValid || !sourceEmail || !forwardingAlias || !directory;
 			return isValid;
 		};
 

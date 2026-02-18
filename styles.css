@@ -95,6 +95,65 @@ If your plugin does not need CSS, delete this file.
 	border-radius: 4px;
 }
 
+/* Sync on launch toggle styling */
+.taskrobin-sync-on-launch-container {
+	margin: 16px 0;
+	padding: 12px 16px;
+	background-color: var(--background-secondary);
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.taskrobin-toggle-wrapper {
+	display: flex;
+	align-items: center;
+}
+
+.taskrobin-toggle-label {
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+	user-select: none;
+}
+
+.taskrobin-toggle-checkbox {
+	margin-right: 10px;
+	cursor: pointer;
+	width: 16px;
+	height: 16px;
+}
+
+.taskrobin-toggle-text {
+	font-size: 14px;
+	font-weight: 500;
+}
+
+/* Sync All button styling */
+.taskrobin-sync-all-container {
+	margin: 16px 0;
+	display: flex;
+	justify-content: center;
+}
+
+.taskrobin-sync-all-button {
+	padding: 10px 20px;
+	font-size: 14px;
+	font-weight: 500;
+	border-radius: 6px;
+	transition: all 0.2s ease-in-out;
+}
+
+.taskrobin-sync-all-button:hover:not(:disabled) {
+	transform: translateY(-1px);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.taskrobin-sync-all-button:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	transform: none;
+}
+
 /* Integration cards styling */
 .taskrobin-integrations-container {
 	display: flex;
@@ -146,6 +205,28 @@ If your plugin does not need CSS, delete this file.
 	width: 16px;
 	height: 16px;
 	color: var(--text-muted);
+}
+
+.taskrobin-card-info-row button.clickable-icon {
+	margin-left: 4px;
+	padding: 2px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	color: var(--text-muted);
+	transition: color 0.2s ease-in-out;
+}
+
+.taskrobin-card-info-row button.clickable-icon:hover {
+	color: var(--text-normal);
+}
+
+.taskrobin-card-info-row button.clickable-icon svg {
+	width: 14px;
+	height: 14px;
 }
 
 .taskrobin-card-actions {

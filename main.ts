@@ -61,7 +61,7 @@ export default class TaskRobinPlugin extends Plugin {
 
 		this.addCommand({
 			id: "sync-emails",
-			name: "Sync emails now",
+			name: "Sync emails from all integrations",
 			callback: async () => {
 				if (
 					this.settings.emailAuths.length === 0 ||
