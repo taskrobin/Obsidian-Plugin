@@ -111,7 +111,7 @@ export class FirstTimeWelcomeModal extends Modal {
 			text: "No payment information required during the trial",
 		});
 		subscriptionList.createEl("li", {
-			text: "Subscription plans start at $2.49/month after the trial period",
+			text: "Subscription plans start at $4.99/month after the trial period",
 		});
 
 		// Create a link to the website
@@ -123,6 +123,34 @@ export class FirstTimeWelcomeModal extends Modal {
 		});
 		link.setAttr("target", "_blank");
 		linkPara.appendText(" for pricing details and more information.");
+
+		// Chrome Extension Section
+		const chromeExtDiv = mainContent.createDiv({
+			cls: "taskrobin-chrome-ext-info",
+		});
+		chromeExtDiv.createEl("h3", { text: "Save Gmail emails without forwarding" });
+		chromeExtDiv.createEl("p", {
+			text: "Save emails directly from Gmail to Obsidian with our Chrome extension. ",
+		});
+		
+		const blogLinkPara = chromeExtDiv.createEl("p");
+		const blogLink = blogLinkPara.createEl("a", {
+			text: "Learn more",
+			href: "https://blog.taskrobin.io/posts/taskrobin-gmail-chrome-extension/",
+		});
+		blogLink.setAttr("target", "_blank");
+		
+		const chromeStepsList = chromeExtDiv.createEl("ol");
+		const downloadStep = chromeStepsList.createEl("li");
+		const downloadLink = downloadStep.createEl("a", {
+			text: "Download",
+			href: "https://chromewebstore.google.com/detail/taskrobin-%E2%80%94-gmail-export/neojinofbjobemgfeolhkcmkjickdkbc",
+		});
+		downloadLink.setAttr("target", "_blank");
+		downloadStep.appendText(" the TaskRobin Chrome extension.");
+
+		chromeStepsList.createEl("li", { text: "Create a secure token in the TaskRobin dashboard." });
+		chromeStepsList.createEl("li", { text: "Enter the token in the extension to link the account." });
 
 		// Button to close and open setup
 		const buttonContainer = contentEl.createDiv({

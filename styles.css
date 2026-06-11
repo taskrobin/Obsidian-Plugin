@@ -68,6 +68,11 @@ If your plugin does not need CSS, delete this file.
 	gap: 8px;
 }
 
+.taskrobin-button-container.left-align {
+	text-align: left;
+	justify-content: flex-start;
+}
+
 .taskrobin-button-container button:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;

@@ -4,9 +4,9 @@ import TaskRobinPlugin from "../main";
 import { setAccessTokenForEmail } from "../syncService";
 import { EmailFolderStructure, Integration } from "../types";
 import {
-	isTaskRobinEmail,
-	isValidEmail,
-	validateDirectoryPath,
+    isTaskRobinEmail,
+    isValidEmail,
+    validateDirectoryPath,
 } from "../utils";
 import { SyncEmailModal } from "./SyncEmailModal";
 
@@ -253,7 +253,7 @@ export class SetupIntegrationModal extends Modal {
 		});
 		contentEl.createEl("p", {
 			cls: "taskrobin-help-text",
-			text: "Please note that TaskRobin is a paid service. 7-day free trial is available to all new users. Paid plan starts at $2.49/month.",
+			text: "Please note that TaskRobin is a paid service. 7-day free trial is available to all new users. Paid plan starts at $4.99/month.",
 		});
 
 		// Buttons

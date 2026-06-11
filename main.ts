@@ -180,7 +180,7 @@ Your-Vault/
 
 - TaskRobin offers a 7-day free trial for all new users
 - No payment information required during the trial to access all features
-- Subscription plans start at $2.49/month after the trial period
+- Subscription plans start at $4.99/month after the trial period
 - Visit [TaskRobin.io](https://www.taskrobin.io) for pricing details
 
 ## Need Help?

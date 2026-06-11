@@ -144,6 +144,24 @@ export class SettingTab extends PluginSettingTab {
 					}),
 			);
 
+		// Add Chrome Extension Setting
+		new Setting(containerEl)
+			.setName("TaskRobin Chrome Extension")
+			.setDesc(
+				"Save emails directly from Gmail to Obsidian without forwarding.",
+			)
+			.addButton((button) =>
+				button
+					.setButtonText("Setup")
+					.setCta()
+					.onClick(() => {
+						window.open(
+							"https://chromewebstore.google.com/detail/taskrobin-%E2%80%94-gmail-export/neojinofbjobemgfeolhkcmkjickdkbc",
+							"_blank",
+						);
+					}),
+			);
+
 		// Email Authentication Section
 		containerEl.createEl("h6", { text: "Email Authentication Info" });
 

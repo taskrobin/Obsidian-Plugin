@@ -393,9 +393,36 @@ export class SyncEmailModal extends Modal {
 			this.createIntegrationCard(integration, integrationsContainer);
 		}
 
+		// Add Chrome Extension CTA in footer style
+		const chromeFooter = contentEl.createEl("div", {
+			cls: ["taskrobin-help-text", "taskrobin-footer"],
+		});
+		chromeFooter.createEl("h3", { 
+			text: "New: Save Gmail emails without forwarding",
+			attr: { style: "margin-bottom: 0.5em; color: var(--text-normal);" }
+		});
+		const chromePara = chromeFooter.createEl("p", {
+			text: "Save emails directly from Gmail to Obsidian with our Chrome extension. ",
+		});
+		
+		const chromeLink = chromePara.createEl("a", {
+			text: "Download Chrome Extension",
+			href: "https://chromewebstore.google.com/detail/taskrobin-%E2%80%94-gmail-export/neojinofbjobemgfeolhkcmkjickdkbc",
+		});
+		chromeLink.setAttr("target", "_blank");
+		
+		chromePara.appendText(" | ");
+
+		const blogLink = chromePara.createEl("a", {
+			text: "Learn more",
+			href: "https://blog.taskrobin.io/posts/taskrobin-gmail-chrome-extension/",
+		});
+		blogLink.setAttr("target", "_blank");
+
 		// Add TaskRobin.io link
 		const taskRobinInfoFooter = contentEl.createEl("div", {
 			cls: ["taskrobin-help-text", "taskrobin-footer"],
+			attr: { style: "margin-top: 1em;" }
 		});
 		taskRobinInfoFooter.createEl("p", {
 			text: "TaskRobin syncs and integrates emails from any email provider to Obsidian, Notion, Airtable and Google Drive.",
