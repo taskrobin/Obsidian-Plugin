@@ -262,7 +262,7 @@ export class SetupIntegrationModal extends Modal {
 		});
 		const confirmButton = buttonContainer.createEl("button", {
 			text: "Confirm settings",
-			cls: "mod-cta",
+			cls: "mod-cta taskrobin-submit",
 		});
 		confirmButton.disabled = true;
 		const settingsButton = buttonContainer.createEl("button", {

@@ -23,6 +23,7 @@ export interface TaskRobinPluginSettings {
 	rootDirectory: string;
 	downloadAttachments: boolean;
 	syncOnLaunch: boolean;
+	prefixMainEmailFile: boolean;
 
 	// Fields for multiple integrations
 	integrations: Integration[];

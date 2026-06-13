@@ -8,6 +8,7 @@ export const DEFAULT_SETTINGS: TaskRobinPluginSettings = {
 	rootDirectory: "Emails",
 	downloadAttachments: true,
 	syncOnLaunch: false,
+	prefixMainEmailFile: true,
 	integrations: [],
 	emailAuths: [],
 	defaultEmailAddress: "",

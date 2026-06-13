@@ -144,6 +144,21 @@ export class SettingTab extends PluginSettingTab {
 					}),
 			);
 
+		// Add prefix main email file toggle
+		new Setting(containerEl)
+			.setName("Prefix main email file with '!'")
+			.setDesc(
+				"When using the 'Folder per email' structure, prepend '!' to the main email file to ensure it appears first in the file explorer.",
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.prefixMainEmailFile)
+					.onChange(async (value) => {
+						this.plugin.settings.prefixMainEmailFile = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
 		// Add Chrome Extension Setting
 		new Setting(containerEl)
 			.setName("TaskRobin Chrome Extension")
