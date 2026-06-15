@@ -5,7 +5,49 @@ import {
 	Integration,
 	TaskRobinPluginSettings,
 } from "./types";
-import { formatEmailFolderName, sanitizeFileName } from "./utils";
+import {
+	formatEmailFolderName,
+	replaceFilenameTimestamp,
+	sanitizeFileName,
+	formatTimestamp,
+} from "./utils";
+
+/**
+ * Normalizes URLs by stripping query parameters and decoding encoded characters.
+ */
+export function normalizeUrl(url: string): string {
+    try {
+        return decodeURIComponent(new URL(url).pathname);
+    } catch (e) {
+        // Fallback if it's not a valid URL
+        return decodeURIComponent(url.split("?")[0]);
+    }
+}
+
+/**
+ * Generates a unique file path by appending a suffix if the file already exists.
+ * @param app The Obsidian app instance
+ * @param targetPath The desired path for the file
+ * @returns A unique path for the file
+ */
+async function getUniqueFilePath(
+	app: App,
+	targetPath: string,
+): Promise<string> {
+	let uniquePath = targetPath;
+	let counter = 1;
+
+	const parts = targetPath.split(".");
+	const extension = parts.length > 1 ? `.${parts.pop()}` : "";
+	const baseName = parts.join(".");
+
+	while ((await app.vault.getAbstractFileByPath(uniquePath)) !== null) {
+		uniquePath = `${baseName}_${counter}${extension}`;
+		counter++;
+	}
+
+	return uniquePath;
+}
 
 /**
  * Get the access token for a specific origin email
@@ -17,12 +59,9 @@ export function getAccessTokenForEmail(
 	settings: TaskRobinPluginSettings,
 	originEmail: string,
 ): string {
-	// Look for a matching EmailAuth entry
 	const auth = settings.emailAuths.find(
 		(auth) => auth.originEmail === originEmail,
 	);
-
-	// Return the token if found, otherwise return empty string
 	return auth?.accessToken || "";
 }
 
@@ -39,23 +78,18 @@ export async function setAccessTokenForEmail(
 	accessToken: string,
 	saveSettings: () => Promise<void>,
 ): Promise<void> {
-	// Look for a matching EmailAuth entry
 	let auth = settings.emailAuths.find(
 		(auth) => auth.originEmail === originEmail,
 	);
 
 	if (auth) {
-		// Update existing auth
 		auth.accessToken = accessToken;
 	} else {
-		// Create new auth entry
 		settings.emailAuths.push({
 			originEmail: originEmail,
 			accessToken: accessToken,
 		});
 	}
-
-	// Save settings
 	await saveSettings();
 }
 
@@ -65,17 +99,13 @@ export async function performEmailSync(
 	integration: Integration,
 ): Promise<void> {
 	try {
-		// Use the integration-specific settings
 		const emailAddress = integration.originEmail;
 		const rootDirectory = integration.rootDirectory;
 
-		// Get the folder structure option from the integration settings
-		// Default to FolderPerEmail if not specified
 		const folderStructure =
 			integration.obsidianEmailFolderStructure ||
 			EmailFolderStructure.FolderPerEmail;
 
-		// Ensure the root directory exists, create it if it doesn't
 		const rootDirectoryExists =
 			(await app.vault.getAbstractFileByPath(rootDirectory)) !== null;
 		if (!rootDirectoryExists) {
@@ -83,7 +113,6 @@ export async function performEmailSync(
 		}
 
 		new Notice(`Syncing emails for ${emailAddress}...`);
-		// Get the access token for this email address
 		const accessToken = getAccessTokenForEmail(settings, emailAddress);
 		const data = await syncEmails(
 			emailAddress,
@@ -106,47 +135,10 @@ export async function performEmailSync(
 					}
 				}
 
-				const folderName = formatEmailFolderName(emailId, subject);
-				const downloadedFiles: Map<string, string> = new Map(); // originalFileName -> finalFileName
-
-				// Helper to find final filename in downloadedFiles (fuzzy match for timestamps)
-				const getFinalFileName = (searchName: string) => {
-					const trimmed = searchName.trim().toLowerCase();
-					// Try exact match first
-					for (const [orig, final] of downloadedFiles.entries()) {
-						if (orig.toLowerCase() === trimmed) return final;
-					}
-
-					// Fuzzy match for timestamps/prefixes: 
-					// "Test inline image.png" should match "Test-attachment-image_12345.png"
-					const searchParts = trimmed.split(".");
-					const searchExt =
-						searchParts.length > 1 ? searchParts.pop() : "";
-					// Normalize base: replace spaces, dashes, underscores with single space
-					const normalize = (s: string) => s.replace(/[-_ ]+/g, " ").trim();
-					const searchBase = normalize(searchParts.join("."));
-
-					for (const [orig, final] of downloadedFiles.entries()) {
-						const origLower = orig.toLowerCase();
-						const origParts = origLower.split(".");
-						const origExt =
-							origParts.length > 1 ? origParts.pop() : "";
-						const origBase = normalize(origParts.join("."));
-
-						if (searchExt === origExt || searchExt === "") {
-							if (
-								origBase.includes(searchBase) ||
-								searchBase.includes(origBase)
-							) {
-								return final;
-							}
-						}
-					}
-					return null;
-				};
+				const folderName = formatEmailFolderName(emailId, subject, settings);
+				const urlToLocalFileName: Map<string, string> = new Map(); // normalizedFileUrl -> finalFileName
 
 				if (folderStructure === EmailFolderStructure.FolderPerEmail) {
-					// Create folder per email
 					const emailFolderPath = `${rootDirectory}/${folderName}`;
 					const folderExists =
 						(await app.vault.getAbstractFileByPath(
@@ -162,120 +154,89 @@ export async function performEmailSync(
 						content?: string;
 					} | null = null;
 
-					const downloadPromises = Object.entries(files).map(
-						async ([fileName, fileUrl]) => {
-							const isMainEmail =
-								fileName.endsWith(".md") &&
-								fileName.startsWith("email-");
+					for (const [fileName, fileUrl] of Object.entries(files)) {
+						const isMainEmail =
+							fileName.endsWith(".md") &&
+							fileName.startsWith("email-");
 
-							// Prefix markdown files (except the main email) with subject
-							const vaultFileName =
-								fileName.endsWith(".md") &&
-								subject &&
-								!isMainEmail
-									? `${subject}-${fileName}`
-									: fileName;
-							const finalFileName =
-								sanitizeFileName(vaultFileName);
-							downloadedFiles.set(fileName, finalFileName);
-
-							// If downloadAttachments is disabled, only process the main email message file
-							if (!settings.downloadAttachments && !isMainEmail) {
-								return; // Skip this file
-							}
-
-							try {
-								const finalFilePath = `${emailFolderPath}/${finalFileName}`;
-
-								if (isMainEmail) {
-									const fileResponse = await fetch(fileUrl);
-									if (!fileResponse.ok)
-										throw new Error(
-											`Failed to fetch main email: ${fileResponse.status}`,
-										);
-									const content = await fileResponse.text();
-									mainEmailFile = {
-										fileName,
-										fileUrl,
-										content,
-									};
-									return;
-								}
-
-								const finalFilePathExists =
-									(await app.vault.getAbstractFileByPath(
-										finalFilePath,
-									)) !== null;
-
-								if (!finalFilePathExists) {
-									const fileResponse = await fetch(fileUrl, {
-										mode: "cors",
-										credentials: "omit",
-									});
-									if (!fileResponse.ok) {
-										throw new Error(
-											`Failed to download ${fileName}: ${fileResponse.status} ${fileResponse.statusText}`,
-										);
-									}
-									const fileData =
-										await fileResponse.arrayBuffer();
-									await app.vault.createBinary(
-										finalFilePath,
-										fileData,
-									);
-								}
-							} catch (error) {
-								console.error(
-									`Error downloading file ${fileName}:`,
-									error,
-								);
-								new Notice(
-									`Failed to download file: ${fileName}`,
-								);
-							}
-						},
-					);
-
-					await Promise.all(downloadPromises);
-
-					// Process and save the main email file after all attachments are tracked
-					const finalMainEmailFile = mainEmailFile as {
-						fileName: string;
-						fileUrl: string;
-						content?: string;
-					} | null;
-					if (finalMainEmailFile && finalMainEmailFile.content) {
-						let updatedContent = finalMainEmailFile.content;
-
-						// 1. Replace [image: filename] with ![[filename]]
-						updatedContent = updatedContent.replace(
-							/\[image:\s*(.*?)\]/gi,
-							(match: string, fileName: string) => {
-								const finalName = getFinalFileName(fileName);
-								if (finalName) {
-									return `![[${finalName}]]`;
-								}
-								return match;
-							},
+						const processedFileName = replaceFilenameTimestamp(
+							fileName,
+							settings,
 						);
+						const vaultFileName =
+							processedFileName.endsWith(".md") &&
+							subject &&
+							!isMainEmail
+								? `${subject}-${processedFileName}`
+								: processedFileName;
+						const finalFileName = sanitizeFileName(vaultFileName);
 
-						// 2. Replace attachment links with [[filename]]
-						updatedContent = updatedContent.replace(
-							/\[(.*?)\]\((.*?)\)/g,
-							(match: string, linkText: string, url: string) => {
-								const finalName = getFinalFileName(linkText);
-								if (finalName) {
-									return `[[${finalName}]]`;
-								}
-								return match;
-							},
+						if (!settings.downloadAttachments && !isMainEmail) {
+							continue;
+						}
+
+						try {
+							const initialFilePath = `${emailFolderPath}/${finalFileName}`;
+							const finalFilePath = await getUniqueFilePath(
+								app,
+								initialFilePath,
+							);
+							const uniqueFinalFileName =
+								finalFilePath.split("/").pop() || finalFileName;
+
+							urlToLocalFileName.set(normalizeUrl(fileUrl), uniqueFinalFileName);
+
+							if (isMainEmail) {
+								const fileResponse = await fetch(fileUrl);
+								if (!fileResponse.ok)
+									throw new Error(
+										`Failed to fetch main email: ${fileResponse.status}`,
+									);
+								const content = await fileResponse.text();
+								mainEmailFile = {
+									fileName,
+									fileUrl,
+									content,
+								};
+								continue;
+							}
+
+							const fileResponse = await fetch(fileUrl, {
+								mode: "cors",
+								credentials: "omit",
+							});
+							if (!fileResponse.ok) {
+								throw new Error(
+									`Failed to download ${fileName}: ${fileResponse.status} ${fileResponse.statusText}`,
+								);
+							}
+							const fileData = await fileResponse.arrayBuffer();
+							await app.vault.createBinary(finalFilePath, fileData);
+						} catch (error) {
+							console.error(
+								`Error downloading file ${fileName}:`,
+								error,
+							);
+							new Notice(`Failed to download file: ${fileName}`);
+						}
+					}
+
+					if (mainEmailFile && mainEmailFile.content) {
+						console.log(`[TaskRobin] Mapping dump:`, Array.from(urlToLocalFileName.entries()));
+						let updatedContent = processContentLinks(
+							mainEmailFile.content,
+							(url) => urlToLocalFileName.get(normalizeUrl(url)) || null,
 						);
 
 						const prefix = settings.prefixMainEmailFile ? "!" : "";
+						const processedMainFileName = replaceFilenameTimestamp(
+							mainEmailFile.fileName,
+							settings,
+						);
 						const finalFileName = sanitizeFileName(
 							subject
-								? `${prefix}${subject}-${finalMainEmailFile.fileName}`
-								: `${prefix}${finalMainEmailFile.fileName}`,
+								? `${prefix}${subject}-${processedMainFileName}`
+								: `${prefix}${processedMainFileName}`,
 						);
 						const finalFilePath = `${emailFolderPath}/${finalFileName}`;
 						const finalFilePathExists =
@@ -293,155 +254,138 @@ export async function performEmailSync(
 
 					new Notice(`Email files saved in ${emailFolderPath}`);
 				} else {
-					// Markdown files in root, attachments in folders
 					let mainEmailFile: {
 						fileName: string;
 						fileUrl: string;
 						content?: string;
 					} | null = null;
 
-					const downloadPromises = Object.entries(files).map(
-						async ([fileName, fileUrl]) => {
-							try {
-								const isMainEmail =
-									fileName.endsWith(".md") &&
-									fileName.startsWith("email-");
+					for (const [fileName, fileUrl] of Object.entries(files)) {
+						try {
+							const isMainEmail =
+								fileName.endsWith(".md") &&
+								fileName.startsWith("email-");
 
-								const vaultFileName =
-									fileName.endsWith(".md") &&
-									subject &&
-									!isMainEmail
-										? `${subject}-${fileName}`
-										: fileName;
-								const finalFileName =
-									sanitizeFileName(vaultFileName);
-								downloadedFiles.set(fileName, finalFileName);
-
-								if (isMainEmail) {
-									const fileResponse = await fetch(fileUrl);
-									if (!fileResponse.ok)
-										throw new Error(
-											`Failed to fetch main email: ${fileResponse.status}`,
-										);
-									const content = await fileResponse.text();
-									mainEmailFile = {
-										fileName,
-										fileUrl,
-										content,
-									};
-								} else {
-									// This is another markdown file or an attachment
-									// Skip if downloadAttachments is disabled
-									if (!settings.downloadAttachments) {
-										return; // Skip this file
-									}
-
-									// Save it in the attachment folder
-									// First, ensure the root attachments folder exists
-									const rootAttachmentsPath = `${rootDirectory}/attachments`;
-									const rootAttachmentsFolderExists =
-										(await app.vault.getAbstractFileByPath(
-											rootAttachmentsPath,
-										)) !== null;
-									if (!rootAttachmentsFolderExists) {
-										await app.vault.createFolder(
-											rootAttachmentsPath,
-										);
-									}
-
-									// Create a subfolder for this email's attachments
-									const attachmentFolderName = `${folderName} attachments`;
-									const attachmentFolderPath = `${rootAttachmentsPath}/${attachmentFolderName}`;
-
-									// Check if the email's attachment folder exists, create it if it doesn't
-									const folderExists =
-										(await app.vault.getAbstractFileByPath(
-											attachmentFolderPath,
-										)) !== null;
-									if (!folderExists) {
-										await app.vault.createFolder(
-											attachmentFolderPath,
-										);
-									}
-
-									// Save the file in the email's attachment folder
-									const finalFilePath = `${attachmentFolderPath}/${finalFileName}`;
-									const finalFilePathExists =
-										(await app.vault.getAbstractFileByPath(
-											finalFilePath,
-											// @ts-ignore
-										)) !== null;
-
-									if (!finalFilePathExists) {
-										const fileResponse = await fetch(
-											fileUrl,
-											{
-												mode: "cors",
-												credentials: "omit",
-											},
-										);
-										if (!fileResponse.ok) {
-											throw new Error(
-												`Failed to download ${fileName}: ${fileResponse.status} ${fileResponse.statusText}`,
-											);
-										}
-										const fileData =
-											await fileResponse.arrayBuffer();
-										await app.vault.createBinary(
-											finalFilePath,
-											fileData,
-										);
-									}
-								}
-							} catch (error) {
-								console.error(
-									`Error downloading file ${fileName}:`,
-									error,
+							const processedFileName =
+								replaceFilenameTimestamp(
+									fileName,
+									settings,
 								);
-								new Notice(
-									`Failed to download file: ${fileName}`,
+
+							const vaultFileName =
+								processedFileName.endsWith(".md") &&
+								subject &&
+								!isMainEmail
+									? `${subject}-${processedFileName}`
+									: processedFileName;
+							const finalFileName =
+								sanitizeFileName(vaultFileName);
+
+							if (isMainEmail) {
+								const fileResponse = await fetch(fileUrl);
+								if (!fileResponse.ok)
+									throw new Error(
+										`Failed to fetch main email: ${fileResponse.status}`,
+									);
+								const content = await fileResponse.text();
+								mainEmailFile = {
+									fileName,
+									fileUrl,
+									content,
+								};
+								const initialFilePath = `${rootDirectory}/${finalFileName}`;
+								const finalFilePath = await getUniqueFilePath(
+									app,
+									initialFilePath,
+								);
+								const uniqueFinalFileName =
+									finalFilePath.split("/").pop() || finalFileName;
+
+								urlToLocalFileName.set(normalizeUrl(fileUrl), uniqueFinalFileName);
+							} else {
+								if (!settings.downloadAttachments) {
+									continue;
+								}
+
+								const rootAttachmentsPath = `${rootDirectory}/attachments`;
+								const rootAttachmentsFolderExists =
+									(await app.vault.getAbstractFileByPath(
+										rootAttachmentsPath,
+									)) !== null;
+								if (!rootAttachmentsFolderExists) {
+									await app.vault.createFolder(
+										rootAttachmentsPath,
+									);
+								}
+
+								const attachmentFolderName = `${folderName} attachments`;
+								const attachmentFolderPath = `${rootAttachmentsPath}/${attachmentFolderName}`;
+
+								const folderExists =
+									(await app.vault.getAbstractFileByPath(
+										attachmentFolderPath,
+									)) !== null;
+								if (!folderExists) {
+									await app.vault.createFolder(
+										attachmentFolderPath,
+									);
+								}
+
+								const initialFilePath = `${attachmentFolderPath}/${finalFileName}`;
+								const finalFilePath = await getUniqueFilePath(
+									app,
+									initialFilePath,
+								);
+								const uniqueFinalFileName =
+									finalFilePath.split("/").pop() ||
+									finalFileName;
+
+								urlToLocalFileName.set(normalizeUrl(fileUrl), uniqueFinalFileName);
+
+								const fileResponse = await fetch(fileUrl, {
+									mode: "cors",
+									credentials: "omit",
+								});
+								if (!fileResponse.ok) {
+									throw new Error(
+										`Failed to download ${fileName}: ${fileResponse.status} ${fileResponse.statusText}`,
+									);
+								}
+								const fileData =
+									await fileResponse.arrayBuffer();
+								await app.vault.createBinary(
+									finalFilePath,
+									fileData,
 								);
 							}
-						},
-					);
+						} catch (error) {
+							console.error(
+								`Error downloading file ${fileName}:`,
+								error,
+							);
+							new Notice(
+								`Failed to download file: ${fileName}`,
+							);
+						}
+					}
 
-					await Promise.all(downloadPromises);
-
-					// Process and save the main email file
-					const finalMainEmailFile = mainEmailFile as {
-						fileName: string;
-						fileUrl: string;
-						content?: string;
-					} | null;
-					if (finalMainEmailFile && finalMainEmailFile.content) {
-						let updatedContent = finalMainEmailFile.content;
+					if (mainEmailFile && mainEmailFile.content) {
+						let updatedContent = mainEmailFile.content;
 						const attachmentFolderName = `${folderName} attachments`;
 
-						// 1. Replace [image: filename] with ![[attachments/folder attachments/filename]]
-						updatedContent = updatedContent.replace(
-							/\[image:\s*(.*?)\]/gi,
-							(match: string, fileName: string) => {
-								const finalName = getFinalFileName(fileName);
-								if (finalName) {
-									return `![[attachments/${attachmentFolderName}/${finalName}]]`;
-								}
-								return match;
-							},
+						updatedContent = processContentLinks(
+							updatedContent,
+							(url) => urlToLocalFileName.get(normalizeUrl(url)) || null,
+							`attachments/${attachmentFolderName}/`,
 						);
 
-						// 2. Replace attachment links with [[attachments/folder attachments/filename]]
-						updatedContent = updatedContent.replace(
-							/\[(.*?)\]\((.*?)\)/g,
-							(match: string, linkText: string, url: string) => {
-								const finalName = getFinalFileName(linkText);
-								if (finalName) {
-									return `[[attachments/${attachmentFolderName}/${finalName}]]`;
-								}
-								return match;
-							},
+						const processedMainFileName = replaceFilenameTimestamp(
+							mainEmailFile.fileName,
+							settings,
 						);
-
-						const finalFilePath = `${rootDirectory}/${folderName}.md`;
+						const finalFilePath = `${rootDirectory}/${sanitizeFileName(
+							processedMainFileName,
+						)}`;
 						const finalFilePathExists =
 							(await app.vault.getAbstractFileByPath(
 								finalFilePath,
@@ -465,4 +409,38 @@ export async function performEmailSync(
 		new Notice("Failed to sync. Check console for details.");
 		throw error;
 	}
+}
+
+/**
+ * Processes markdown content to update attachment links to their final filenames in the vault.
+ * Handles [image: filename], [linkText](url), and [[filename]] patterns.
+ * 
+ * @param content The markdown content to process
+ * @param getLocalFileNameByUrl Function to map URL to final vault filename
+ * @param pathPrefix Optional path prefix to add to the links (e.g., 'attachments/folder/')
+ * @returns The updated markdown content
+ */
+function processContentLinks(
+	content: string,
+	getLocalFileNameByUrl: (url: string) => string | null,
+	pathPrefix: string = "",
+): string {
+    
+	let updatedContent = content;
+
+	// 1. Replace [image: url] or [image: name](url) -> need to robustly identify images
+    // 2. Replace attachment links [linkText](url) with [[pathPrefix/finalName]]
+	updatedContent = updatedContent.replace(
+		/\[(.*?)\]\((.*?)\)/g,
+		(match: string, linkText: string, url: string) => {
+			const finalName = getLocalFileNameByUrl(url);
+			console.log(`[TaskRobin] Resolving Normalized URL: ${normalizeUrl(url)} -> Local Filename: ${finalName}`);
+			if (finalName) {
+				return `[[${pathPrefix}${finalName}]]`;
+			}
+			return match;
+		},
+	);
+
+	return updatedContent;
 }

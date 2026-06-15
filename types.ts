@@ -33,6 +33,10 @@ export interface TaskRobinPluginSettings {
 
 	// Optional default email for convenience when creating new integrations
 	defaultEmailAddress?: string;
+
+	// Datetime format and timezone settings
+	datetimeFormat?: string;
+	timezone?: string;
 }
 
 export interface SyncResponse {

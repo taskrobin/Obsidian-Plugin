@@ -12,4 +12,6 @@ export const DEFAULT_SETTINGS: TaskRobinPluginSettings = {
 	integrations: [],
 	emailAuths: [],
 	defaultEmailAddress: "",
+	datetimeFormat: "",
+	timezone: "",
 };

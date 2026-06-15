@@ -1,4 +1,5 @@
-import { App, Notice, PluginSettingTab, Setting } from "obsidian";
+import "moment-timezone";
+import { App, Notice, PluginSettingTab, Setting, moment } from "obsidian";
 import TaskRobinPlugin from "./main";
 import { FirstTimeWelcomeModal } from "./modals/FirstTimeWelcomeModal";
 import { SetupIntegrationModal } from "./modals/SetupIntegrationModal";
@@ -177,8 +178,55 @@ export class SettingTab extends PluginSettingTab {
 					}),
 			);
 
+		// Add Date and Time Settings
+		containerEl.createEl("h3", { text: "Date and Time Settings" });
+
+		new Setting(containerEl)
+			.setName("Datetime format")
+			.setDesc(
+				"The format for the date and time in file and folder names. Characters like ':' are not allowed in filenames and will be replaced with '-'. Choose a format below.",
+			)
+			.addDropdown((dropdown) => {
+				dropdown
+					.addOption("YYYY-MM-DD", "YYYY-MM-DD (Default)")
+					.addOption("YYYY-MM-DD HH-mm", "YYYY-MM-DD HH-mm")
+					.addOption("YYYY-MM-DD HH-mm-ss", "YYYY-MM-DD HH-mm-ss")
+					.addOption("MM-DD-YYYY", "MM-DD-YYYY")
+					.addOption("MM-DD-YYYY HH-mm", "MM-DD-YYYY HH-mm")
+					.addOption("DD-MM-YYYY", "DD-MM-YYYY")
+					.addOption("DD-MM-YYYY HH-mm", "DD-MM-YYYY HH-mm")
+					.addOption("YYYYMMDDHHmmss", "YYYYMMDDHHmmss")
+					.setValue(
+						this.plugin.settings.datetimeFormat || "YYYY-MM-DD",
+					)
+					.onChange(async (value) => {
+						this.plugin.settings.datetimeFormat = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName("Timezone")
+			.setDesc(
+				"The timezone to use for the date and time. Defaults to system local time.",
+			)
+			.addDropdown((dropdown) => {
+				dropdown.addOption("", "System Local Time");
+				// Get all timezones from moment-timezone
+				const timezones = (moment as any).tz.names();
+				for (const tz of timezones) {
+					dropdown.addOption(tz, tz);
+				}
+				dropdown
+					.setValue(this.plugin.settings.timezone || "")
+					.onChange(async (value) => {
+						this.plugin.settings.timezone = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
 		// Email Authentication Section
-		containerEl.createEl("h6", { text: "Email Authentication Info" });
+		containerEl.createEl("h3", { text: "Email Authentication Info" });
 
 		// Display all email-token pairs
 		if (

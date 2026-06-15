@@ -1,15 +1,30 @@
+import { moment } from "obsidian";
+import "moment-timezone";
+import { TaskRobinPluginSettings } from "./types";
+
+export function formatTimestamp(
+	timestampStr: string,
+	settings: TaskRobinPluginSettings,
+): string {
+	// API provides timestamps in microseconds. 
+	// moment.unix() expects seconds.
+	const timestampInSeconds = parseFloat(timestampStr) / 1000000;
+	let date = moment.unix(timestampInSeconds);
+
+	if (settings.timezone) {
+		date = (date as any).tz(settings.timezone);
+	}
+
+	const format = settings.datetimeFormat || "YYYY-MM-DD";
+	return date.format(format);
+}
+
 export function formatEmailFolderName(
 	emailId: string,
 	subject: string,
+	settings: TaskRobinPluginSettings,
 ): string {
-	// Convert string emailId to number and remove the last 6 digits to get the standard Unix timestamp
-	const timestamp = Math.floor(parseInt(emailId) / 1000000);
-
-	// Create a Date object from the Unix timestamp
-	const date = new Date(timestamp * 1000);
-
-	// Format the date as YYYY-MM-DD
-	const formattedDate = date.toISOString().split("T")[0];
+	const formattedDate = formatTimestamp(emailId, settings);
 
 	// Use default if subject is empty or only whitespace
 	const rawName = `${formattedDate} ${subject?.trim() || "No Subject"}`;
@@ -34,6 +49,36 @@ export function isTaskRobinEmail(email: string): boolean {
 
 export function sanitizeFileName(fileName: string): string {
 	return fileName.replace(/[*"\/<>:|?]/g, "_");
+}
+
+/**
+ * Replaces unix timestamps in filenames (e.g., _1234567890.123) with a formatted date string.
+ * @param fileName The original filename
+ * @param settings The plugin settings
+ * @returns The filename with the timestamp replaced by a formatted date
+ */
+export function replaceFilenameTimestamp(
+	fileName: string,
+	settings: TaskRobinPluginSettings,
+): string {
+	// Match unix timestamp like 1781490899 or 1781490899.936054
+	const timestampRegex = /(\d{10}(?:\.\d+)?)/;
+	const match = fileName.match(timestampRegex);
+
+	if (match) {
+		const timestampStr = match[1];
+		
+		// Convert the seconds-based timestamp from the filename to microseconds 
+		// for consistency with formatTimestamp, which expects microseconds.
+		const microTimestamp = (parseFloat(timestampStr) * 1000000).toString();
+		const formattedDate = formatTimestamp(microTimestamp, settings);
+
+		// Replace the timestamp with the formatted date, sanitized for file systems
+		const sanitizedDate = formattedDate.replace(/[:\/\\*?"<>|]/g, "-");
+		return fileName.replace(timestampStr, sanitizedDate);
+	}
+
+	return fileName;
 }
 
 export interface DirectoryValidationResult {
