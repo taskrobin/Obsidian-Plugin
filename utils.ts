@@ -1,5 +1,5 @@
-import { moment } from "obsidian";
 import "moment-timezone";
+import { moment } from "obsidian";
 import { TaskRobinPluginSettings } from "./types";
 
 export function formatTimestamp(
@@ -52,34 +52,65 @@ export function sanitizeFileName(fileName: string): string {
 }
 
 /**
- * Replaces unix timestamps in filenames (e.g., _1234567890.123) with a formatted date string.
+ * Replaces the trailing unix timestamp in filenames with a formatted, sortable
+ * date-time string. Two cases are handled:
+ *
+ * 1. Main email files named like "email-<emailId>_<timestamp>.md" (e.g.
+ *    "email-1754642310048602_1754642310.0560887.md"). Both the "email-" prefix
+ *    and the long emailId digit run are dropped (redundant with the timestamp),
+ *    producing just "2026-07-13 101512.md".
+ * 2. Any other file with a trailing "_<timestamp>" right before the extension
+ *    (e.g. "image_1781517559.8963816.png"), which becomes
+ *    "image 2026-07-13 101512.png".
+
+ *
  * @param fileName The original filename
  * @param settings The plugin settings
- * @returns The filename with the timestamp replaced by a formatted date
+ * @returns The filename with the timestamp replaced by a formatted date-time
  */
 export function replaceFilenameTimestamp(
 	fileName: string,
 	settings: TaskRobinPluginSettings,
 ): string {
-	// Match unix timestamp like 1781490899 or 1781490899.936054
-	const timestampRegex = /(\d{10}(?:\.\d+)?)/;
-	const match = fileName.match(timestampRegex);
+	// Date + time format used for filenames (independent of settings.datetimeFormat,
+	// which is only used for the folder name) so that multiple messages within the
+	// same thread/day still produce distinct, sortable filenames.
+	const filenameDateTimeFormat = "YYYY-MM-DD HHmmss";
 
-	if (match) {
-		const timestampStr = match[1];
-		
-		// Convert the seconds-based timestamp from the filename to microseconds 
+	const formatMicroTimestamp = (timestampStr: string): string => {
+		// Convert the seconds-based timestamp from the filename to microseconds
 		// for consistency with formatTimestamp, which expects microseconds.
 		const microTimestamp = (parseFloat(timestampStr) * 1000000).toString();
-		const formattedDate = formatTimestamp(microTimestamp, settings);
+		const formattedDateTime = formatTimestamp(microTimestamp, {
+			...settings,
+			datetimeFormat: filenameDateTimeFormat,
+		});
+		return formattedDateTime.replace(/[:\/\\*?"<>|]/g, "-");
+	};
 
-		// Replace the timestamp with the formatted date, sanitized for file systems
-		const sanitizedDate = formattedDate.replace(/[:\/\\*?"<>|]/g, "-");
-		return fileName.replace(timestampStr, sanitizedDate);
+	// Case 1: main email file "email-<emailId>_<timestamp><ext>" - drop both the
+	// "email-" prefix and the emailId.
+	const mainEmailRegex = /^email-\d{10,}_(\d{10}(?:\.\d+)?)(\.[^.\/]+)$/;
+	const mainEmailMatch = fileName.match(mainEmailRegex);
+	if (mainEmailMatch) {
+		const sanitizedDateTime = formatMicroTimestamp(mainEmailMatch[1]);
+		return `${sanitizedDateTime}${mainEmailMatch[2]}`;
 	}
+
+	// Case 2: any other file with a trailing "_<timestamp>" before the extension.
+	const timestampRegex = /_(\d{10}(?:\.\d+)?)(\.[^.\/]+)$/;
+	const match = fileName.match(timestampRegex);
+	if (match) {
+		const sanitizedDateTime = formatMicroTimestamp(match[1]);
+		return fileName.replace(match[0], ` ${sanitizedDateTime}${match[2]}`);
+	}
+
 
 	return fileName;
 }
+
+
+
 
 export interface DirectoryValidationResult {
 	isValid: boolean;

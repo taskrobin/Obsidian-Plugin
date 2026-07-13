@@ -8,8 +8,7 @@ import {
 import {
 	formatEmailFolderName,
 	replaceFilenameTimestamp,
-	sanitizeFileName,
-	formatTimestamp,
+	sanitizeFileName
 } from "./utils";
 
 /**
@@ -238,19 +237,18 @@ export async function performEmailSync(
 								? `${prefix}${subject}-${processedMainFileName}`
 								: `${prefix}${processedMainFileName}`,
 						);
-						const finalFilePath = `${emailFolderPath}/${finalFileName}`;
-						const finalFilePathExists =
-							(await app.vault.getAbstractFileByPath(
-								finalFilePath,
-							)) !== null;
+						const initialFinalFilePath = `${emailFolderPath}/${finalFileName}`;
+						const finalFilePath = await getUniqueFilePath(
+							app,
+							initialFinalFilePath,
+						);
 
-						if (!finalFilePathExists) {
-							await app.vault.createBinary(
-								finalFilePath,
-								new TextEncoder().encode(updatedContent),
-							);
-						}
+						await app.vault.createBinary(
+							finalFilePath,
+							new TextEncoder().encode(updatedContent),
+						);
 					}
+
 
 					new Notice(`Email files saved in ${emailFolderPath}`);
 				} else {
@@ -383,21 +381,20 @@ export async function performEmailSync(
 							mainEmailFile.fileName,
 							settings,
 						);
-						const finalFilePath = `${rootDirectory}/${sanitizeFileName(
+						const initialFinalFilePath = `${rootDirectory}/${sanitizeFileName(
 							processedMainFileName,
 						)}`;
-						const finalFilePathExists =
-							(await app.vault.getAbstractFileByPath(
-								finalFilePath,
-							)) !== null;
+						const finalFilePath = await getUniqueFilePath(
+							app,
+							initialFinalFilePath,
+						);
 
-						if (!finalFilePathExists) {
-							await app.vault.createBinary(
-								finalFilePath,
-								new TextEncoder().encode(updatedContent),
-							);
-						}
+						await app.vault.createBinary(
+							finalFilePath,
+							new TextEncoder().encode(updatedContent),
+						);
 					}
+
 
 					new Notice(`Email files saved in ${rootDirectory}`);
 				}

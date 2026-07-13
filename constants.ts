@@ -1,5 +1,7 @@
 import { TaskRobinPluginSettings } from "./types";
 
+export const TASKROBIN_API =
+	"https://7ul423cced.execute-api.us-east-2.amazonaws.com/prod";
 export const OBSIDIAN_API =
 	"https://7ul423cced.execute-api.us-east-2.amazonaws.com/prod/obsidian";
 
